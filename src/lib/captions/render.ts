@@ -44,6 +44,15 @@ export function popScale(elapsed: number): number {
 
 const fontOf = (spec: StyleSpec, px: number, family: string) => `${spec.weight} ${px}px ${family}`;
 
+/**
+ * The CSS font a style draws its words in (before any shrink to fit), and the text
+ * transform it applies. Used to load the font and to check two contexts measure alike.
+ */
+export function captionFont(settings: Pick<CaptionSettings, "style" | "size">, family: string = DEFAULT_FONT_FAMILY) {
+  const spec = STYLE_SPECS[settings.style];
+  return { font: fontOf(spec, spec.fontPx * settings.size, family), uppercase: spec.uppercase };
+}
+
 // Text measuring is the slow part of a frame, and the same few words repeat for many frames.
 const widths = new Map<string, number>();
 const MAX_CACHED_WIDTHS = 4000;

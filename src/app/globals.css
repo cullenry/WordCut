@@ -102,6 +102,33 @@ body {
   transition: transform 300ms linear;
 }
 
+/*
+ * The export dialog: opened once per export, so a short scale-and-fade from the
+ * centre (it isn't anchored to its button). Closing is instant.
+ */
+dialog.dialog[open] {
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+dialog.dialog[open]::backdrop {
+  transition: opacity 180ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+/* The export status pill rises in when the dialog is closed during an export. */
+.pill {
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sheet {
     @starting-style {
@@ -117,7 +144,9 @@ body {
   .clip-row-slide {
     transition: none;
   }
-  .enter {
+  .enter,
+  .pill,
+  dialog.dialog[open] {
     @starting-style {
       transform: none;
     }

@@ -6,6 +6,8 @@ import { sourceToEdited } from "@/lib/edl/time";
 import { formatBytes, formatTime } from "@/lib/format";
 import { flushPendingSave, selectPlayEdl, useEditorStore } from "@/store/editor-store";
 import { DropZone } from "./DropZone";
+import { ExportDialog } from "./export/ExportDialog";
+import { ExportPill } from "./export/ExportPill";
 import { Timeline } from "./Timeline";
 import { SidePanel } from "./SidePanel";
 import { VideoPreview } from "./VideoPreview";
@@ -116,6 +118,8 @@ export function Editor() {
           <footer className="border-t border-border bg-panel">
             <Timeline />
           </footer>
+          <ExportDialog />
+          <ExportPill />
         </>
       )}
     </div>

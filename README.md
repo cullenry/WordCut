@@ -8,7 +8,7 @@ Your video never leaves your browser. Only extracted audio is sent for transcrip
 
 ## Status
 
-Early development. Done so far: upload and playback, transcription with word-level timestamps, an interactive transcript, and cutting: select words and press Delete to cut them, with undo and redo. The transcript and your cuts are saved in your browser, so reopening the same file restores them. Also done: filler and long-pause cleanup, and clips: select words and press C to make a clip, reframe it to 9:16, and preview word-by-word captions in three styles. Next: captioned 9:16 export.
+Early development. Done so far: upload and playback, transcription with word-level timestamps, an interactive transcript, and cutting: select words and press Delete to cut them, with undo and redo. The transcript and your cuts are saved in your browser, so reopening the same file restores them. Also done: filler and long-pause cleanup, and clips: select words and press C to make a clip, reframe it to 9:16, and preview word-by-word captions in three styles. Also done: MP4 export of a clip at 1080x1920 or 720x1280, with the cuts, trimmed pauses, crop and captions burned in, made in your browser with WebCodecs (the video never leaves your device).
 
 Chrome or Edge is recommended. Other browsers may lack the WebCodecs support WordCut relies on.
 

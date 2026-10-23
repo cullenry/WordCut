@@ -15,7 +15,9 @@ import {
 } from "@/lib/captions/types";
 import { clampOffset, cropAxis, cropFraction, offsetForCentre, windowStart } from "@/lib/clips/crop";
 import type { Clip } from "@/lib/clips/types";
-import { useEditorStore } from "@/store/editor-store";
+import { percentOf } from "@/lib/media/export/progress";
+import { selectPlayEdl, useEditorStore } from "@/store/editor-store";
+import { useExportStore } from "@/store/export-store";
 import { captionFontFamily, ensureCaptionFonts } from "../captionFont";
 
 const STYLE_LABELS: Record<CaptionStyleId, { name: string; hint: string }> = {
@@ -33,6 +35,8 @@ export function ClipInspector({ clip }: { clip: Clip }) {
 
   return (
     <div className="space-y-6 px-4 py-4">
+      <ExportRow clipId={clip.id} />
+
       <section aria-label="Reframe">
         <h3 className="text-sm font-medium">Reframe to 9:16</h3>
         <CropControl
@@ -92,6 +96,29 @@ export function ClipInspector({ clip }: { clip: Clip }) {
         )}
       </section>
     </div>
+  );
+}
+
+/** Opens the export dialog; shows the export's progress while this clip is exporting. */
+function ExportRow({ clipId }: { clipId: string }) {
+  // The inspector's clip is the one being previewed, so the play EDL is its EDL.
+  const duration = useEditorStore((s) => selectPlayEdl(s)?.duration ?? 0);
+  const openDialog = useExportStore((s) => s.openDialog);
+  const progress = useExportStore((s) =>
+    s.status.state === "running" && s.status.clipId === clipId ? percentOf(s.status.fraction) : null,
+  );
+  return (
+    <button
+      onClick={() => openDialog(clipId)}
+      disabled={duration <= 0}
+      title={duration <= 0 ? "Everything in this clip is cut" : "Export a 9:16 MP4 of this clip"}
+      className="press flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
+    >
+      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10" />
+      </svg>
+      {progress === null ? "Export MP4" : <span className="tabular-nums">Exporting… {progress}%</span>}
+    </button>
   );
 }
 

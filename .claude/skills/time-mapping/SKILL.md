@@ -33,7 +33,7 @@ and `tests/time.test.ts`):
 | `store.seekEdited(t)` | edited |
 | Seek slider, time readout, Timeline, paragraph timestamps shown to the user | edited |
 | Transcript highlight lookup (`findWordIndexAtTime`) | source |
-| Export (step 7) | iterates `edl.ranges` in source time, writes edited time |
+| Export (step 7) | iterates the clip EDL's ranges in source time, writes clip time (see the webcodecs-export skill) |
 
 Rule of thumb: **store and compare in source time; convert to edited time only for display
 and for anything that describes the output video.**
@@ -289,5 +289,8 @@ source time `t` has clip time `sourceToEdited(clipEdl, t)`), and call `renderCli
   unknown ids when loading a saved project.
 - Trims are keyed by the id of the word **before** the gap. Don't key them by time: the transcript
   is the source of truth for where a pause is, and a trim must keep meaning the same pause.
+- Looking up a **video frame** at an exact source time can land 1 µs before the frame that starts
+  there (EDL times are rounded to the microsecond), and the decoder returns the previous frame.
+  Export looks up 0.1 ms into each frame (`FRAME_LOOKUP_OFFSET`, see the webcodecs-export skill).
 - Never mutate `deleted` or `trims`. Every edit makes a new `Set`/`Map` and a new EDL. History stores the ops
   (only the ids that changed), not snapshots, so undo stays cheap on 20k-word transcripts.

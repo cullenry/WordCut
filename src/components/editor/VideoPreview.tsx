@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import { playbackJump, secondsUntilJump, sourceToEdited } from "@/lib/edl/time";
 import { formatTime } from "@/lib/format";
-import { useEditorStore } from "@/store/editor-store";
+import { selectActiveClip, selectPlayEdl, useEditorStore } from "@/store/editor-store";
+import { ClipStage } from "./ClipStage";
 
 const SPEEDS = [0.5, 1, 1.5, 2];
 /**
@@ -18,8 +19,10 @@ export function VideoPreview() {
   const source = useEditorStore((s) => s.source)!;
   const currentTime = useEditorStore((s) => s.currentTime);
   const playing = useEditorStore((s) => s.playing);
-  const edl = useEditorStore((s) => s.edl)!;
-  const { setCurrentTime, setPlaying, registerVideo, seekEdited, togglePlay } = useEditorStore.getState();
+  // In clip view playback, the seek bar and the time readout all run on the selected clip's own timeline.
+  const edl = useEditorStore(selectPlayEdl)!;
+  const clip = useEditorStore(selectActiveClip);
+  const { setCurrentTime, setPlaying, registerVideo, seekPlayEdited, togglePlay } = useEditorStore.getState();
   const videoRef = useRef<HTMLVideoElement>(null);
   const rateRef = useRef(1);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -33,7 +36,7 @@ export function VideoPreview() {
   const follow = useCallback(() => {
     const el = videoRef.current;
     if (!el) return;
-    const { edl } = useEditorStore.getState();
+    const edl = selectPlayEdl(useEditorStore.getState());
     const lookahead = SKIP_LOOKAHEAD * el.playbackRate;
     const jump = edl && !el.paused ? playbackJump(edl, el.currentTime, lookahead) : null;
     if (jump === "end") {
@@ -72,11 +75,13 @@ export function VideoPreview() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="grid min-h-0 flex-1 place-items-center bg-black p-2">
+      <div className="relative grid min-h-0 flex-1 place-items-center bg-black p-2">
+        {clip && <ClipStage />}
+        {/* Stays mounted in clip view: it is the picture the 9:16 canvas is drawn from. */}
         <video
           ref={videoRef}
           src={source.url}
-          className="max-h-full max-w-full"
+          className={clip ? "pointer-events-none absolute h-px w-px opacity-0" : "max-h-full max-w-full"}
           onClick={togglePlay}
           onPlay={() => setPlaying(true)}
           onPause={() => {
@@ -108,7 +113,7 @@ export function VideoPreview() {
           max={duration}
           step={0.01}
           value={editedTime}
-          onChange={(e) => seekEdited(Number(e.target.value))}
+          onChange={(e) => seekPlayEdited(Number(e.target.value))}
           disabled={duration === 0}
           aria-label="Seek"
           className="h-1 flex-1 accent-accent"

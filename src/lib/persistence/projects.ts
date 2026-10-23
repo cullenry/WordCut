@@ -1,4 +1,5 @@
 import type { Envelope } from "@/lib/audio/envelope";
+import type { Clip } from "@/lib/clips/types";
 import type { VideoMeta } from "@/lib/probe";
 import type { SilenceTrim } from "@/lib/edl/trims";
 import type { Transcript } from "@/lib/transcript/types";
@@ -17,6 +18,8 @@ export interface ProjectRecord {
   envelope: Envelope | null;
   /** Absent in projects saved before cutting existed. */
   edits?: SavedEdits;
+  /** Absent in projects saved before clips existed. Checked with sanitizeClips on load. */
+  clips?: Clip[];
   createdAt: number;
   updatedAt: number;
 }

@@ -27,3 +27,8 @@ export function redoHistory<T>(h: History<T>): { history: History<T>; entry: T }
   const entry = h.future[h.future.length - 1];
   return { history: { past: [...h.past, entry], future: h.future.slice(0, -1) }, entry };
 }
+
+/** Replaces the newest entry (used to fold a burst of similar edits into one) and clears the redo stack. */
+export function replaceLastEntry<T>(h: History<T>, entry: T): History<T> {
+  return { past: [...h.past.slice(0, -1), entry], future: [] };
+}

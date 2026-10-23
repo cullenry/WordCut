@@ -6,34 +6,44 @@ import { CleanupPanel } from "./transcript/CleanupPanel";
 import { EditToolbar } from "./transcript/EditToolbar";
 import { TranscriptView } from "./transcript/TranscriptView";
 
-export function TranscriptPanel() {
+/** Word count and Re-transcribe, shown beside the tabs. */
+export function TranscriptMeta() {
   const transcript = useEditorStore((s) => s.transcript);
   const status = useEditorStore((s) => s.transcription);
   const restored = useEditorStore((s) => s.restored);
   const start = useEditorStore((s) => s.startTranscription);
   const hasCuts = useEditorStore((s) => s.deleted.size > 0);
+  const hasClips = useEditorStore((s) => s.clips.length > 0);
+  if (!transcript || status.state === "running") return null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 text-sm">
-        <span className="font-medium">Transcript</span>
-        {transcript && status.state !== "running" && (
-          <div className="flex items-center gap-3 text-xs text-muted">
-            <span>
-              {transcript.words.length.toLocaleString()} words
-              {restored && " · restored from last session"}
-            </span>
-            <button
-              onClick={() => void start()}
-              title={hasCuts ? "Your cuts are cleared when the video is transcribed again" : undefined}
-              className="press rounded-md border border-border px-2 py-1 hover:bg-panel-2"
-            >
-              Re-transcribe
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="flex items-center gap-3 text-xs text-muted">
+      <span>
+        {transcript.words.length.toLocaleString()} words
+        {restored && " · restored"}
+      </span>
+      <button
+        onClick={() => void start()}
+        title={
+          hasCuts
+            ? `Your cuts are cleared when the video is transcribed again${hasClips ? "; clips are kept" : ""}`
+            : undefined
+        }
+        className="press rounded-md border border-border px-2 py-1 hover:bg-panel-2"
+      >
+        Re-transcribe
+      </button>
+    </div>
+  );
+}
 
+export function TranscriptPanel() {
+  const transcript = useEditorStore((s) => s.transcript);
+  const status = useEditorStore((s) => s.transcription);
+  const start = useEditorStore((s) => s.startTranscription);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
       {status.state === "running" ? (
         <Progress status={status} />
       ) : status.state === "error" ? (

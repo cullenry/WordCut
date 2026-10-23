@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
+import { planClip } from "@/lib/clips/range";
+import { MIN_CLIP_DURATION } from "@/lib/clips/types";
 import { allDeleted } from "@/lib/edl/edits";
 import { formatDuration } from "@/lib/format";
 import { buildWordIndex, selectionRange } from "@/lib/transcript/selection";
@@ -20,9 +22,13 @@ export function EditToolbar({ transcript }: { transcript: Transcript }) {
   const canRedo = useEditorStore((s) => s.history.future.length > 0);
   const removed = useEditorStore((s) => (s.edl ? s.edl.sourceDuration - s.edl.duration : 0));
   const reviewing = useEditorStore((s) => s.cleanup !== null);
-  const { undo, redo, toggleSelection, openCleanup, closeCleanup } = useEditorStore.getState();
+  const edl = useEditorStore((s) => s.edl);
+  const { undo, redo, toggleSelection, openCleanup, closeCleanup, makeClip } = useEditorStore.getState();
 
   const range = useMemo(() => selectionRange(selection, wordIndex), [selection, wordIndex]);
+  // What a clip from the selection would hold, after the cuts. Nothing left means no clip.
+  const clipPlan = useMemo(() => (range && edl ? planClip(words, range, edl) : null), [words, range, edl]);
+  const canClip = clipPlan !== null && clipPlan.duration >= MIN_CLIP_DURATION;
   const restoring = useMemo(() => allDeleted(words, deleted, range), [words, deleted, range]);
 
   return (
@@ -53,6 +59,25 @@ export function EditToolbar({ transcript }: { transcript: Transcript }) {
           <path d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l1.5 1.5M10.5 10.5 12 12M12 4l-1.5 1.5M5.5 10.5 4 12" />
         </svg>
         Clean up
+      </button>
+      <button
+        onClick={makeClip}
+        disabled={!canClip}
+        title={
+          !range
+            ? "Select words in the transcript to make a clip"
+            : canClip
+              ? `Make a clip of ${formatDuration(clipPlan.duration)} from the selection`
+              : "Everything in this selection is cut"
+        }
+        className="press flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-panel-2 disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent"
+      >
+        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4.5" y="1.5" width="7" height="13" rx="1.5" />
+          <path d="M7 6.5 9.5 8 7 9.5Z" />
+        </svg>
+        Make clip
+        <kbd className="rounded border border-border px-1 font-sans text-[10px] text-muted">C</kbd>
       </button>
       {deleted.size > 0 && (
         <span className="ml-auto text-xs tabular-nums text-muted">

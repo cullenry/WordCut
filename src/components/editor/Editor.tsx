@@ -4,10 +4,10 @@ import { useEffect } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { sourceToEdited } from "@/lib/edl/time";
 import { formatBytes, formatTime } from "@/lib/format";
-import { flushPendingSave, useEditorStore } from "@/store/editor-store";
+import { flushPendingSave, selectPlayEdl, useEditorStore } from "@/store/editor-store";
 import { DropZone } from "./DropZone";
 import { Timeline } from "./Timeline";
-import { TranscriptPanel } from "./TranscriptPanel";
+import { SidePanel } from "./SidePanel";
 import { VideoPreview } from "./VideoPreview";
 
 const NON_TEXT_INPUTS = new Set(["range", "checkbox", "radio", "button", "submit", "reset", "color", "file"]);
@@ -26,6 +26,9 @@ function useShortcuts() {
       if (!state.source) return;
       const mod = e.ctrlKey || e.metaKey;
 
+      // A control that handled the key itself (a slider, a clip row) has the last word.
+      if (e.defaultPrevented) return;
+
       // Editing works from anywhere except a text field, including after using the seek slider.
       if (!isTextEntry(t) && !e.altKey) {
         if (mod && e.code === "KeyZ") {
@@ -39,7 +42,13 @@ function useShortcuts() {
           state.redo();
           return;
         }
-        if (!mod && (e.code === "Delete" || e.code === "Backspace") && state.selection) {
+        // The transcript selection only exists on screen in the transcript panel.
+        if (!mod && !e.shiftKey && e.code === "KeyC" && state.panel === "transcript" && state.selection) {
+          e.preventDefault();
+          state.makeClip();
+          return;
+        }
+        if (!mod && (e.code === "Delete" || e.code === "Backspace") && state.selection && state.panel === "transcript") {
           e.preventDefault();
           state.toggleSelection();
           return;
@@ -50,9 +59,10 @@ function useShortcuts() {
       if (e.code === "Space") {
         e.preventDefault();
         state.togglePlay();
-      } else if ((e.code === "ArrowLeft" || e.code === "ArrowRight") && state.edl) {
-        const edited = sourceToEdited(state.edl, state.currentTime);
-        state.seekEdited(edited + (e.code === "ArrowLeft" ? -5 : 5));
+      } else if (e.code === "ArrowLeft" || e.code === "ArrowRight") {
+        // In clip view this steps through the clip, not the whole video.
+        const edl = selectPlayEdl(state);
+        if (edl) state.seekPlayEdited(sourceToEdited(edl, state.currentTime) + (e.code === "ArrowLeft" ? -5 : 5));
       }
     };
     window.addEventListener("keydown", onKey);
@@ -100,7 +110,7 @@ export function Editor() {
               <VideoPreview />
             </section>
             <section className="min-h-0 bg-panel">
-              <TranscriptPanel />
+              <SidePanel />
             </section>
           </div>
           <footer className="border-t border-border bg-panel">

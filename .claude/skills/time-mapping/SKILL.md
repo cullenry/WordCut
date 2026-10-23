@@ -244,6 +244,37 @@ While the cleanup review is open nothing is applied yet, so its markers are draw
 **current** edited timeline: each pause as the band `sourceToEdited(cutStart)`..`sourceToEdited(cutEnd)`
 (the part that will go; both ends are inside a kept range) and each filler at its word's span.
 
+## Clips and captions (step 6)
+
+A **clip** stores only a source range `[start, end)`. It never stores edited time, so it follows
+cuts and trims made before or after it was created.
+
+- `clipEdl(edl, start, end)` (`src/lib/clips/range.ts`) returns the kept ranges inside the clip,
+  re-based so offsets start at 0. It is an ordinary `Edl`, so `sourceToEdited`, `editedToSource`,
+  `playbackJump` and `secondsUntilJump` all work on a clip unchanged, in **clip time**.
+- In the clips panel `selectPlayEdl(state)` returns the clip EDL instead of the full one. Playback,
+  the seek bar, `togglePlay`, the arrow-key seek and the 9:16 canvas all read it, so there is one
+  playback path for both views.
+- A clip made from words is padded by up to `CLIP_PAD` (0.12 s) each side, never more than half the
+  pause to the neighbouring word. A clip that starts or ends on a cut word simply starts at the first
+  kept range inside it; restoring the words later grows the clip back.
+- Clip duration is `clipEdl(...).duration`, never `end - start`. Zero means everything in it is cut;
+  `makeClip` refuses that, and an existing clip shows "Everything is cut".
+
+**Captions are built in clip time.** `captionWordsFor` drops cut words and maps each remaining word
+with `sourceToEdited(clipEdl, t)`, so words either side of a cut are adjacent and group into one line.
+`groupCaptionPages` then makes pages of up to 2 lines of about 4 words (new page on a pause of 0.7 s
+or a sentence end). The renderer is given clip time: `sourceToEdited(clipEdl, video.currentTime)` in the
+preview. **The export worker must iterate `clipEdl.ranges` and pass clip time the same way** (a frame at
+source time `t` has clip time `sourceToEdited(clipEdl, t)`), and call `renderClipFrame`, nothing else.
+
+| Thing | Time base |
+| --- | --- |
+| `Clip.start` / `Clip.end` | source |
+| `CaptionWord`, `CaptionPage`, `drawCaptions(t)` | clip (edited, from the clip start) |
+| Clip list "at 0:42" | full edited timeline |
+| Seek bar / readout in clip view | clip |
+
 ## Pitfalls
 
 - Don't compare a source time against `edl.duration`, or an edited time against `Word.start`.

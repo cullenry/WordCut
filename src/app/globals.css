@@ -83,6 +83,21 @@ body {
   }
 }
 
+/* Rows slide aside while another is dragged; they are not animated otherwise. */
+.clip-row-slide {
+  transition: transform 150ms var(--ease-out);
+}
+
+/* The Clips tab count gives a small pop when a clip is added or removed. */
+.badge-pop {
+  animation: badge-pop 200ms var(--ease-out);
+}
+@keyframes badge-pop {
+  from {
+    transform: scale(1.3);
+  }
+}
+
 .progress-fill {
   transition: transform 300ms linear;
 }
@@ -95,6 +110,12 @@ body {
   }
   .press:active {
     transform: none;
+  }
+  .badge-pop {
+    animation: none;
+  }
+  .clip-row-slide {
+    transition: none;
   }
   .enter {
     @starting-style {

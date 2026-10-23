@@ -10,7 +10,20 @@
   --color-accent: #7c5cff;
   --color-accent-2: #a78bfa;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+}
+
+/* Landing-page tokens. They point at variables, so the page's dark mode can swap them. */
+@theme inline {
+  --color-paper: var(--lp-paper);
+  --color-paper-2: var(--lp-paper-2);
+  --color-ink: var(--lp-ink);
+  --color-ink-2: var(--lp-ink-2);
+  --color-rule: var(--lp-rule);
+  --color-cut: var(--lp-cut);
+  --color-mark: var(--lp-mark);
+  --font-display: var(--font-display-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-accent: var(--font-accent-serif), ui-serif, Georgia, serif;
+  --font-label: var(--font-plex-mono), ui-monospace, monospace;
 }
 
 html,
@@ -132,16 +145,269 @@ dialog.dialog[open]::backdrop {
 }
 
 /*
- * Landing-page transcript demo. Unlike the editor, the strike is drawn: the
- * demo exists to show what a cut is, and it is clicked a handful of times, not hundreds.
+ * Landing page: paper and ink, with a red that only ever means "cut" and the
+ * captions' yellow as a highlighter. These variables are unused by the editor,
+ * which keeps its own dark theme. data-ink="dark" on <html> is the page's dark mode.
  */
-.demo-word {
+:root {
+  --lp-paper: #f2eee5;
+  --lp-paper-2: #e8e3d7;
+  --lp-ink: #141210;
+  --lp-ink-2: #5f5a50;
+  --lp-rule: rgb(20 18 16 / 0.16);
+  --lp-cut: #dc3520;
+  --lp-mark: #ffd60a;
+}
+:root[data-ink="dark"] {
+  --lp-paper: #141210;
+  --lp-paper-2: #1e1b18;
+  --lp-ink: #eee8dc;
+  --lp-ink-2: #a39d91;
+  --lp-rule: rgb(238 232 220 / 0.16);
+  --lp-cut: #ff5b43;
+}
+html:has(.landing),
+html:has(.landing) body {
+  background: var(--lp-paper);
+  color: var(--lp-ink);
+  color-scheme: light;
+}
+html[data-ink="dark"]:has(.landing),
+html[data-ink="dark"]:has(.landing) body {
+  color-scheme: dark;
+}
+html:has(.landing) ::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--lp-ink) 25%, transparent);
+}
+.landing ::selection {
+  background: var(--lp-mark);
+  color: #141210;
+}
+
+/*
+ * A word that can be cut (CutWord): the strike draws in red, then the word
+ * closes up to a red notch. Clicked a handful of times, so it's animated; the
+ * width is pinned to pixels by the component around each change.
+ */
+.cw {
   position: relative;
-  border-radius: 4px;
+  display: inline-block;
+  white-space: pre;
+  border-radius: 0.12em;
+  transition: width 300ms var(--ease-in-out), color 140ms ease;
+}
+.cw-w {
+  position: relative;
+  border-radius: 0.12em;
+}
+.cw-w::before {
+  content: "";
+  position: absolute;
+  left: -0.04em;
+  right: -0.04em;
+  top: 54%;
+  height: max(2px, 0.075em);
+  background: var(--lp-cut);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms var(--ease-out), opacity 120ms ease;
+}
+.cw[data-cut="true"] {
+  color: color-mix(in oklab, var(--lp-ink) 38%, transparent);
+}
+.cw[data-cut="true"] .cw-w::before {
+  transform: scaleX(1);
+}
+.cw[data-closed="true"] {
+  width: 0.34em;
+  color: transparent;
+  clip-path: inset(0);
+}
+.cw[data-closed="true"] .cw-w::before {
+  opacity: 0;
+}
+.cw::after {
+  content: "";
+  position: absolute;
+  left: 0.06em;
+  top: 0.2em;
+  bottom: 0.16em;
+  width: max(2px, 0.08em);
+  border-radius: 1px;
+  background: var(--lp-cut);
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition: opacity 140ms var(--ease-out), transform 180ms var(--ease-out);
+}
+.cw[data-closed="true"]::after {
+  opacity: 1;
+  transform: none;
+}
+/* A run of cuts shows one notch: the words after the first close up to nothing. */
+.cw[data-closed="true"] + .cw[data-closed="true"] {
+  width: 0;
+}
+.cw[data-closed="true"] + .cw[data-closed="true"]::after {
+  opacity: 0;
+}
+button.cw {
   cursor: pointer;
+}
+/* A word you can click is never a tiny target ("a"); closed, it keeps the same width with its notch in the middle. */
+button.cw:not([data-closed="true"]) {
+  min-width: 24px;
+}
+button.cw[data-closed="true"] {
+  width: 24px;
+}
+button.cw::after {
+  left: calc(50% - max(1px, 0.04em));
+}
+button.cw:focus-visible {
+  outline: 2px solid var(--lp-ink);
+  outline-offset: 1px;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.cw:not([data-cut="true"]):hover .cw-w {
+    background: color-mix(in oklab, var(--lp-mark) 60%, transparent);
+  }
+  button.cw[data-closed="true"]:hover::after {
+    transform: scaleX(1.8);
+  }
+}
+
+/* The headline's "um.": struck once, as the page loads. */
+.h-strike {
+  position: relative;
+}
+.h-strike::after {
+  content: "";
+  position: absolute;
+  left: -0.02em;
+  right: -0.02em;
+  top: 55%;
+  height: 0.07em;
+  background: var(--lp-cut);
+  transform-origin: left;
+  animation: strike-in 420ms var(--ease-out) 450ms both;
+}
+@keyframes strike-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* Lines struck as they scroll into view, where scroll-driven animation exists; drawn already elsewhere. */
+.strike {
+  position: relative;
+}
+.strike::after {
+  content: "";
+  position: absolute;
+  left: -0.02em;
+  right: -0.02em;
+  top: 54%;
+  height: 0.075em;
+  background: var(--lp-cut);
+  transform-origin: left;
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .strike::after {
+      animation: strike-in linear both;
+      animation-timeline: view();
+      animation-range: entry 60% cover 38%;
+    }
+  }
+}
+
+/* The playable demo's timeline: segments slide up as the text closes, so they share its delay. */
+.pd-seg {
+  position: absolute;
+  left: 0;
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--lp-ink) 30%, transparent);
+  transition:
+    transform 300ms var(--ease-in-out) 200ms,
+    opacity 160ms ease 200ms,
+    background-color 120ms ease;
+}
+.pd-seg[data-cut="true"] {
+  background: var(--lp-cut);
+  opacity: 0;
+}
+.pd-track {
+  transition: width 300ms var(--ease-in-out) 200ms;
+}
+.pd-notch {
+  transition:
+    transform 300ms var(--ease-in-out) 200ms,
+    opacity 160ms var(--ease-out) 380ms;
+  @starting-style {
+    opacity: 0;
+  }
+}
+.pd-fade {
+  transition: opacity 160ms var(--ease-out);
+}
+.pd-fade[data-shown="false"] {
+  opacity: 0;
+}
+
+/* Scroll ruler ticks: minor every 12px, major every 60px. */
+.ruler-ticks {
+  background: repeating-linear-gradient(to bottom, currentColor 0 1px, transparent 1px 12px);
+}
+.ruler-ticks-major {
+  background: repeating-linear-gradient(to bottom, currentColor 0 1px, transparent 1px 60px);
+}
+.ruler-notch {
+  transition: opacity 160ms var(--ease-out), transform 200ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.3);
+  }
+}
+
+/*
+ * Landing-page editor demo (EditorDemo), a scripted loop. Things that appear
+ * ease out quickly; things that travel (the cursor, the timeline closing up)
+ * use the stronger ease-in-out. Nothing overshoots.
+ */
+.ed-panel {
+  transition:
+    opacity 320ms var(--ease-out) var(--d, 0ms),
+    transform 320ms var(--ease-out) var(--d, 0ms);
+}
+.ed-root[data-out] .ed-panel {
+  opacity: 0;
+  transform: translateY(6px);
+  transition-duration: 200ms;
+  transition-delay: 0ms;
+}
+/* Between loops everything snaps back to the start while the panels are hidden. */
+.ed-root[data-reset] * {
+  transition: none !important;
+  animation: none !important;
+}
+.ed-fade {
+  transition: opacity 200ms var(--ease-out) var(--d, 0ms);
+}
+.ed-fade[data-shown="false"] {
+  opacity: 0;
+  transition-delay: 0ms;
+}
+.ed-tab {
   transition: color 160ms ease;
 }
-.demo-word::after {
+.ed-word {
+  position: relative;
+  transition: opacity 140ms var(--ease-out), color 160ms ease;
+}
+.ed-word[data-typed="false"] {
+  opacity: 0;
+}
+.ed-word::after {
   content: "";
   position: absolute;
   left: -1px;
@@ -153,43 +419,121 @@ dialog.dialog[open]::backdrop {
   transform-origin: left;
   transition: transform 220ms var(--ease-out);
 }
-.demo-word[aria-pressed="true"] {
+.ed-word[data-cut="true"] {
   color: color-mix(in oklab, var(--color-fg) 32%, transparent);
 }
-.demo-word[aria-pressed="true"]::after {
+.ed-word[data-cut="true"]::after {
   transform: scaleX(1);
 }
-@media (hover: hover) and (pointer: fine) {
-  .demo-word:hover {
-    background: rgb(255 255 255 / 0.08);
-  }
+.ed-caret {
+  position: relative;
+  display: inline-block;
+  width: 0;
 }
-.demo-word:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
+.ed-caret::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  bottom: -0.2em;
+  width: 2px;
+  height: 1.15em;
+  border-radius: 1px;
+  background: var(--color-accent-2);
 }
-
-/* One tick per word on the demo's tracks. Kept words slide to their edited time; cut ones fade. */
-.demo-tick {
+.ed-seg {
+  position: absolute;
+  left: 0;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--color-accent-2) 32%, transparent);
+  transition: transform 500ms var(--ease-in-out), opacity 200ms ease, background-color 160ms ease;
+}
+.ed-seg[data-cut="true"] {
+  background: rgb(248 113 113 / 0.7);
+}
+.ed-seg[data-gone="true"] {
+  opacity: 0;
+}
+.ed-track {
+  transition: width 500ms var(--ease-in-out);
+}
+.ed-stage {
+  transition: opacity 280ms var(--ease-out), transform 280ms var(--ease-out);
+}
+.ed-stage[data-shown="false"] {
+  opacity: 0;
+  transform: translateX(16px);
+}
+.ed-chip {
+  transform-origin: top left;
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.ed-chip[data-state="hidden"] {
+  opacity: 0;
+  transform: translateY(-2px) scale(0.95);
+}
+.ed-chip[data-state="pressed"] {
+  transform: scale(0.97);
+  transition-duration: 100ms;
+}
+.ed-cursor {
   position: absolute;
   left: 0;
   top: 0;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--color-accent-2);
-  transition: transform 320ms var(--ease-in-out), opacity 200ms ease;
+  z-index: 10;
+  pointer-events: none;
+  transition: transform var(--ms, 0ms) var(--ease-in-out), opacity 160ms var(--ease-out);
 }
-.demo-tick.is-cut {
-  opacity: 0.18;
-}
-.demo-tick.is-gone {
+.ed-cursor[data-shown="false"] {
   opacity: 0;
+}
+.ed-cursor-icon {
+  display: block;
+  transform-origin: 2px 2px;
+  transition: transform 100ms var(--ease-out);
+}
+.ed-cursor[data-pressed="true"] .ed-cursor-icon {
+  transform: scale(0.88);
+}
+.ed-ring {
+  position: absolute;
+  left: -13px;
+  top: -13px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--color-accent-2);
+  animation: ed-ring 420ms var(--ease-out) forwards;
+}
+@keyframes ed-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(0.45);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.25);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .demo-word::after,
-  .demo-tick {
-    transition-property: opacity;
+  /* The editor demo shows one still frame; nothing in it should move. */
+  .ed-root,
+  .ed-root * {
+    transition: none !important;
+    animation: none !important;
+  }
+  /* Landing page: cuts still happen, they just don't animate. */
+  .cw,
+  .cw-w::before,
+  .cw::after,
+  .pd-seg,
+  .pd-track,
+  .pd-notch,
+  .ruler-notch {
+    transition: none;
+  }
+  .h-strike::after {
+    animation: none;
   }
   .sheet {
     @starting-style {

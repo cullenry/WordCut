@@ -46,6 +46,25 @@ body {
   }
 }
 
+/*
+ * Cut words: dimmed and struck through, in place. Deliberately no transition:
+ * cutting and restoring happen dozens of times a session and must feel instant.
+ * Hovering a run brightens it and tints the strike, hinting that a click restores it.
+ */
+.cut {
+  cursor: pointer;
+  color: color-mix(in oklab, var(--color-fg) 32%, transparent);
+  text-decoration-line: line-through;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: color-mix(in oklab, var(--color-fg) 40%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .cut:hover {
+    color: color-mix(in oklab, var(--color-fg) 62%, transparent);
+    text-decoration-color: var(--color-accent-2);
+  }
+}
+
 .progress-fill {
   transition: transform 300ms linear;
 }

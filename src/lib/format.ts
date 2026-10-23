@@ -7,6 +7,13 @@ export function formatTime(seconds: number): string {
   return h > 0 ? `${h}:${pad(m % 60)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
+/** A length of time: tenths of a second under a minute ("4.2s"), else like formatTime. */
+export function formatDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) seconds = 0;
+  const tenths = Math.round(seconds * 10) / 10;
+  return tenths < 60 ? `${tenths.toFixed(1)}s` : formatTime(tenths);
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KB", "MB", "GB", "TB"];

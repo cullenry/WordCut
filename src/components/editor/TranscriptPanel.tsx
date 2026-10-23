@@ -2,6 +2,7 @@
 
 import type { TranscriptionStatus } from "@/store/editor-store";
 import { useEditorStore } from "@/store/editor-store";
+import { EditToolbar } from "./transcript/EditToolbar";
 import { TranscriptView } from "./transcript/TranscriptView";
 
 export function TranscriptPanel() {
@@ -9,6 +10,7 @@ export function TranscriptPanel() {
   const status = useEditorStore((s) => s.transcription);
   const restored = useEditorStore((s) => s.restored);
   const start = useEditorStore((s) => s.startTranscription);
+  const hasCuts = useEditorStore((s) => s.deleted.size > 0);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -20,7 +22,11 @@ export function TranscriptPanel() {
               {transcript.words.length.toLocaleString()} words
               {restored && " · restored from last session"}
             </span>
-            <button onClick={() => void start()} className="press rounded-md border border-border px-2 py-1 hover:bg-panel-2">
+            <button
+              onClick={() => void start()}
+              title={hasCuts ? "Your cuts are cleared when the video is transcribed again" : undefined}
+              className="press rounded-md border border-border px-2 py-1 hover:bg-panel-2"
+            >
               Re-transcribe
             </button>
           </div>
@@ -35,7 +41,10 @@ export function TranscriptPanel() {
         transcript.words.length === 0 ? (
           <p className="p-8 text-center text-sm text-muted">No speech was detected in this video.</p>
         ) : (
-          <TranscriptView transcript={transcript} />
+          <>
+            <EditToolbar transcript={transcript} />
+            <TranscriptView transcript={transcript} />
+          </>
         )
       ) : (
         <EmptyState onStart={() => void start()} />

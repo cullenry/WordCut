@@ -1,22 +1,39 @@
 "use client";
 
-import { useRef } from "react";
-import { formatTime } from "@/lib/format";
+import { useMemo, useRef } from "react";
+import { editedCuts } from "@/lib/edl/edl";
+import { sourceToEdited } from "@/lib/edl/time";
+import { formatDuration, formatTime } from "@/lib/format";
 import { useEditorStore } from "@/store/editor-store";
 
+/** The edited video laid end to end; each cut is a gap in the track. */
 export function Timeline() {
-  const duration = useEditorStore((s) => s.source!.meta.duration);
+  const edl = useEditorStore((s) => s.edl)!;
   const currentTime = useEditorStore((s) => s.currentTime);
-  const seek = useEditorStore((s) => s.seek);
+  const seekEdited = useEditorStore((s) => s.seekEdited);
   const trackRef = useRef<HTMLDivElement>(null);
+  const marks = useMemo(() => editedCuts(edl), [edl]);
+
+  const duration = edl.duration;
+  const edited = sourceToEdited(edl, currentTime);
 
   function seekFromPointer(clientX: number) {
     const rect = trackRef.current!.getBoundingClientRect();
     const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
-    seek(ratio * duration);
+    seekEdited(ratio * duration);
   }
 
-  const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
+  if (duration === 0 && edl.sourceDuration > 0) {
+    return (
+      <div className="px-4 py-3">
+        <div className="grid h-[4.75rem] place-items-center rounded-lg border border-dashed border-border text-xs text-muted">
+          Everything is cut. Undo or click a struck-through word to bring it back.
+        </div>
+      </div>
+    );
+  }
+
+  const pct = duration > 0 ? (edited / duration) * 100 : 0;
   const ticks = 10;
 
   return (
@@ -38,6 +55,17 @@ export function Timeline() {
         className="relative h-14 cursor-pointer touch-none overflow-hidden rounded-lg border border-border bg-panel-2"
       >
         <div className="absolute inset-y-0 left-0 bg-accent/20" style={{ width: `${pct}%` }} />
+        {marks.map((m, i) => (
+          <div
+            key={i}
+            title={`Cut ${formatDuration(m.removed)}`}
+            className="absolute inset-y-0 w-2 -translate-x-1/2"
+            style={{ left: `${(m.at / duration) * 100}%` }}
+          >
+            <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-bg" />
+            <div className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-b-full bg-red-400/80" />
+          </div>
+        ))}
         <div className="absolute inset-y-0 w-0.5 bg-accent" style={{ left: `${pct}%` }} />
       </div>
     </div>

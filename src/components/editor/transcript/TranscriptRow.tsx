@@ -11,6 +11,10 @@ interface RowProps {
   index: number;
   top: number;
   words: Word[];
+  /** Cut word ids; a new set on every edit, so rows re-render when cuts change. */
+  deleted: ReadonlySet<string>;
+  /** Paragraph start on the edited timeline. */
+  time: number;
   mark: SpeakerMark;
   /** Index of the word currently being spoken, or -1 if it is not in this row. */
   active: number;
@@ -23,13 +27,16 @@ interface RowProps {
 
 /**
  * One paragraph. Memoised on primitives so that moving the highlight or
- * extending a selection re-renders only the rows it touches.
+ * extending a selection re-renders only the rows it touches. Each run of cut
+ * words is one <del>, so hovering any part of it shows what a click restores.
  */
 export const TranscriptRow = memo(function TranscriptRow({
   paragraph: p,
   index,
   top,
   words,
+  deleted,
+  time,
   mark,
   active,
   selStart,
@@ -38,23 +45,53 @@ export const TranscriptRow = memo(function TranscriptRow({
   onSeek,
 }: RowProps) {
   const last = p.endIndex - 1;
+  const isSelected = (i: number) => i >= selStart && i <= selEnd;
+  // The space after word i, highlighted when the selection continues past it.
+  const space = (i: number) =>
+    i < last && (
+      <span key={`${words[i].id}-sp`} className={isSelected(i) && i < selEnd ? "bg-accent/30" : undefined}>
+        {" "}
+      </span>
+    );
+
   const spans = [];
-  for (let i = p.startIndex; i <= last; i++) {
-    const selected = i >= selStart && i <= selEnd;
+  let allCut = true;
+  for (let i = p.startIndex; i <= last; ) {
+    if (deleted.has(words[i].id)) {
+      let end = i;
+      while (end < last && deleted.has(words[end + 1].id)) end++;
+      const run = [];
+      for (let k = i; k <= end; k++) {
+        run.push(
+          <span key={words[k].id} data-i={k} className={`rounded-[3px] ${isSelected(k) ? "bg-accent/30" : ""}`}>
+            {words[k].text}
+          </span>,
+          k < end && space(k),
+        );
+      }
+      spans.push(
+        <del key={`${words[i].id}-cut`} title="Cut. Click to restore." className="cut">
+          {run}
+        </del>,
+        space(end),
+      );
+      i = end + 1;
+      continue;
+    }
+    allCut = false;
     const cls =
       i === active
         ? "bg-accent text-white"
-        : selected
+        : isSelected(i)
           ? "bg-accent/30"
           : "[@media(hover:hover)]:hover:bg-white/10";
     spans.push(
-      <span key={words[i].id}>
-        <span data-i={i} className={`cursor-pointer rounded-[3px] ${cls}`}>
-          {words[i].text}
-        </span>
-        {i < last && <span className={selected && i < selEnd ? "bg-accent/30" : undefined}> </span>}
+      <span key={words[i].id} data-i={i} className={`cursor-pointer rounded-[3px] ${cls}`}>
+        {words[i].text}
       </span>,
+      space(i),
     );
+    i++;
   }
 
   return (
@@ -66,10 +103,10 @@ export const TranscriptRow = memo(function TranscriptRow({
     >
       <button
         onClick={() => onSeek(p.start)}
-        className="self-start pt-0.5 text-left text-xs tabular-nums text-muted hover:text-fg"
+        className={`self-start pt-0.5 text-left text-xs tabular-nums text-muted hover:text-fg ${allCut ? "opacity-40" : ""}`}
         tabIndex={-1}
       >
-        {formatTime(p.start)}
+        {formatTime(time)}
       </button>
       <div>
         {mark && (

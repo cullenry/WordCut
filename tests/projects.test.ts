@@ -5,6 +5,7 @@ import {
   loadProject,
   projectIdFor,
   saveProject,
+  updateProject,
   type ProjectRecord,
 } from "@/lib/persistence/projects";
 
@@ -53,5 +54,19 @@ describe("project persistence", () => {
     expect((await loadProject("p2"))?.fileName).toBe("renamed.mp4");
     await deleteProject("p2");
     expect(await loadProject("p2")).toBeNull();
+  });
+
+  it("patches edits into a saved project, keeping the rest", async () => {
+    await saveProject(record("p3"));
+    expect(await updateProject("p3", { edits: { deletedWordIds: ["w0"] } })).toBe(true);
+    const loaded = await loadProject("p3");
+    expect(loaded?.edits).toEqual({ deletedWordIds: ["w0"] });
+    expect(loaded?.transcript?.words[0].text).toBe("hi");
+    expect(loaded?.id).toBe("p3");
+  });
+
+  it("does not create a project when updating an unknown id", async () => {
+    expect(await updateProject("nope", { edits: { deletedWordIds: [] } })).toBe(false);
+    expect(await loadProject("nope")).toBeNull();
   });
 });

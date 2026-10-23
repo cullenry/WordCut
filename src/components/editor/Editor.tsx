@@ -2,28 +2,66 @@
 
 import { useEffect } from "react";
 import { Logo } from "@/components/ui/Logo";
+import { sourceToEdited } from "@/lib/edl/time";
 import { formatBytes, formatTime } from "@/lib/format";
-import { useEditorStore } from "@/store/editor-store";
+import { flushPendingSave, useEditorStore } from "@/store/editor-store";
 import { DropZone } from "./DropZone";
 import { Timeline } from "./Timeline";
 import { TranscriptPanel } from "./TranscriptPanel";
 import { VideoPreview } from "./VideoPreview";
 
+const NON_TEXT_INPUTS = new Set(["range", "checkbox", "radio", "button", "submit", "reset", "color", "file"]);
+
+/** True where the browser's own undo and delete should win: text fields and editable content. */
+function isTextEntry(t: HTMLElement): boolean {
+  if (t.tagName === "INPUT") return !NON_TEXT_INPUTS.has((t as HTMLInputElement).type);
+  return t.tagName === "TEXTAREA" || t.isContentEditable;
+}
+
 function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
+      const state = useEditorStore.getState();
+      if (!state.source) return;
+      const mod = e.ctrlKey || e.metaKey;
+
+      // Editing works from anywhere except a text field, including after using the seek slider.
+      if (!isTextEntry(t) && !e.altKey) {
+        if (mod && e.code === "KeyZ") {
+          e.preventDefault();
+          if (e.shiftKey) state.redo();
+          else state.undo();
+          return;
+        }
+        if (mod && !e.shiftKey && e.code === "KeyY") {
+          e.preventDefault();
+          state.redo();
+          return;
+        }
+        if (!mod && (e.code === "Delete" || e.code === "Backspace") && state.selection) {
+          e.preventDefault();
+          state.toggleSelection();
+          return;
+        }
+      }
+
       if (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA") return;
-      const { togglePlay, seek, currentTime, source } = useEditorStore.getState();
-      if (!source) return;
       if (e.code === "Space") {
         e.preventDefault();
-        togglePlay();
-      } else if (e.code === "ArrowLeft") seek(currentTime - 5);
-      else if (e.code === "ArrowRight") seek(currentTime + 5);
+        state.togglePlay();
+      } else if ((e.code === "ArrowLeft" || e.code === "ArrowRight") && state.edl) {
+        const edited = sourceToEdited(state.edl, state.currentTime);
+        state.seekEdited(edited + (e.code === "ArrowLeft" ? -5 : 5));
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // IndexedDB writes are debounced; don't lose the last edit when the tab closes.
+    window.addEventListener("pagehide", flushPendingSave);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pagehide", flushPendingSave);
+    };
   }, []);
 }
 

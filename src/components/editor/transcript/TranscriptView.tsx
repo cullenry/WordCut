@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { sourceToEdited } from "@/lib/edl/time";
 import { findWordIndexAtTime } from "@/lib/transcript/lookup";
 import { groupParagraphs, paragraphIndexOfWord } from "@/lib/transcript/paragraphs";
 import {
@@ -39,6 +40,7 @@ interface Drag {
 /**
  * Virtualised, click-to-seek transcript. Words are never mutated; selection is
  * an anchor/focus pair of word ids in the store (native text selection is off).
+ * Cut words stay in place, struck through; clicking one restores its run.
  */
 export function TranscriptView({ transcript }: { transcript: Transcript }) {
   const { words } = transcript;
@@ -49,11 +51,15 @@ export function TranscriptView({ transcript }: { transcript: Transcript }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { range, version, offsets, totalHeight, observeRow, onScroll } = useVirtualRows(paragraphs, scrollRef);
 
-  const activeIndex = useEditorStore((s) =>
-    findWordIndexAtTime(words, s.currentTime, { toleranceSeconds: SEEK_TOLERANCE }),
-  );
+  // Never highlight a cut word: just after a cut, the lookup can still land on it.
+  const activeIndex = useEditorStore((s) => {
+    const i = findWordIndexAtTime(words, s.currentTime, { toleranceSeconds: SEEK_TOLERANCE });
+    return i >= 0 && s.deleted.has(words[i].id) ? -1 : i;
+  });
   const playing = useEditorStore((s) => s.playing);
   const selection = useEditorStore((s) => s.selection);
+  const deleted = useEditorStore((s) => s.deleted);
+  const edl = useEditorStore((s) => s.edl);
   const selRange = useMemo(() => selectionRange(selection, wordIndex), [selection, wordIndex]);
 
   // --- Follow mode: auto-scroll with playback until the user scrolls away. ---
@@ -117,9 +123,20 @@ export function TranscriptView({ transcript }: { transcript: Transcript }) {
     };
   }, [setFollow]);
 
-  // --- Pointer: click to seek, drag to select, shift-click to extend. ---
+  // --- Pointer: click to seek, drag to select, shift-click to extend, click a cut word to restore. ---
   const dragRef = useRef<Drag | null>(null);
   const rafRef = useRef(0);
+  /** A cut word pressed without shift: restored on release unless the press turns into a drag. */
+  const restoreRef = useRef(-1);
+
+  // On release, so a drag that starts on a cut word still selects instead.
+  const releaseOn = useCallback(
+    (i: number) => {
+      const { selection: sel, restoreRunAt } = useEditorStore.getState();
+      if (i >= 0 && sel?.anchor === words[i].id && sel.focus === words[i].id) restoreRunAt(i);
+    },
+    [words],
+  );
 
   const seekToWord = useCallback(
     (i: number) => {
@@ -177,9 +194,13 @@ export function TranscriptView({ transcript }: { transcript: Transcript }) {
       return;
     }
     e.preventDefault();
-    const current = useEditorStore.getState().selection;
+    const { selection: current, deleted: cut } = useEditorStore.getState();
+    restoreRef.current = -1;
     if (e.shiftKey && current) {
       setSelection(extendSelection(current, words[i].id));
+    } else if (cut.has(words[i].id)) {
+      setSelection(collapsedSelection(words[i].id));
+      restoreRef.current = i;
     } else {
       setSelection(collapsedSelection(words[i].id));
       seekToWord(i);
@@ -203,9 +224,13 @@ export function TranscriptView({ transcript }: { transcript: Transcript }) {
       const i = wordIndexOf(e.target);
       if (i >= 0 && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) {
         useEditorStore.getState().setSelection(collapsedSelection(words[i].id));
-        seekToWord(i);
+        if (useEditorStore.getState().deleted.has(words[i].id)) releaseOn(i);
+        else seekToWord(i);
       }
+    } else if (restoreRef.current >= 0) {
+      releaseOn(restoreRef.current);
     }
+    restoreRef.current = -1;
     stopDrag();
   };
 
@@ -242,6 +267,8 @@ export function TranscriptView({ transcript }: { transcript: Transcript }) {
         index={i}
         top={offsets[i]}
         words={words}
+        deleted={deleted}
+        time={edl ? sourceToEdited(edl, p.start) : p.start}
         mark={marks[i]}
         active={activeIndex >= p.startIndex && activeIndex < p.endIndex ? activeIndex : -1}
         selStart={sel ? sel.start : -1}
@@ -260,7 +287,10 @@ export function TranscriptView({ transcript }: { transcript: Transcript }) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={stopDrag}
+        onPointerCancel={() => {
+          restoreRef.current = -1;
+          stopDrag();
+        }}
         className="h-full overflow-y-auto py-4"
       >
         <div className="relative" style={{ height: totalHeight }}>

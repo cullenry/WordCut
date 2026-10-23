@@ -14,8 +14,15 @@ export interface ProjectRecord {
   meta: VideoMeta;
   transcript: Transcript | null;
   envelope: Envelope | null;
+  /** Absent in projects saved before cutting existed. */
+  edits?: SavedEdits;
   createdAt: number;
   updatedAt: number;
+}
+
+/** The user's edits. Word ids refer to `transcript`; the transcript itself is never changed. */
+export interface SavedEdits {
+  deletedWordIds: string[];
 }
 
 const DB_NAME = "wordcut";
@@ -65,6 +72,31 @@ export async function loadProject(id: string): Promise<ProjectRecord | null> {
 
 export async function saveProject(record: ProjectRecord): Promise<void> {
   await run("readwrite", (s) => s.put({ ...record, updatedAt: Date.now() }));
+}
+
+/**
+ * Merges `patch` into an existing project in one transaction. Resolves false
+ * (and writes nothing) if the project has not been saved yet.
+ */
+export async function updateProject(
+  id: string,
+  patch: Partial<Omit<ProjectRecord, "id" | "createdAt">>,
+): Promise<boolean> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    let found = false;
+    const get = store.get(id) as IDBRequest<ProjectRecord | undefined>;
+    get.onsuccess = () => {
+      if (!get.result) return;
+      found = true;
+      store.put({ ...get.result, ...patch, id, updatedAt: Date.now() });
+    };
+    tx.oncomplete = () => resolve(found);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
 }
 
 export async function deleteProject(id: string): Promise<void> {

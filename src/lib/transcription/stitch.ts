@@ -16,7 +16,7 @@ export function stitchChunks(chunks: ChunkResult[]): Word[] {
   const out: Word[] = [];
   let prevEnd = 0;
 
-  for (const chunk of ordered) {
+  for (const [chunkIndex, chunk] of ordered.entries()) {
     const words = [...chunk.words].sort((a, b) => a.start - b.start);
     for (const w of words) {
       const text = w.text.trim();
@@ -30,6 +30,7 @@ export function stitchChunks(chunks: ChunkResult[]): Word[] {
         start: round(start),
         end: round(end),
         confidence: w.confidence,
+        chunk: chunkIndex,
         ...(w.speaker !== undefined && { speaker: w.speaker }),
       });
       prevEnd = end;

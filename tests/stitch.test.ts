@@ -72,6 +72,14 @@ describe("stitchChunks", () => {
     expect(word).toMatchObject({ speaker: 1, confidence: 0.5 });
   });
 
+  it("tags each word with its chunk index in time order", () => {
+    const words = stitchChunks([
+      { start: 10, end: 20, words: [w("b", 0, 1)] },
+      { start: 0, end: 10, words: [w("a", 0, 1)] },
+    ]);
+    expect(words.map((x) => x.chunk)).toEqual([0, 1]);
+  });
+
   it("handles chunks with no words", () => {
     expect(stitchChunks([{ start: 0, end: 5, words: [] }])).toEqual([]);
   });

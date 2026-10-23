@@ -1,11 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import { formatTime } from "@/lib/format";
-import { groupParagraphs } from "@/lib/transcript/paragraphs";
-import type { Transcript } from "@/lib/transcript/types";
 import type { TranscriptionStatus } from "@/store/editor-store";
 import { useEditorStore } from "@/store/editor-store";
+import { TranscriptView } from "./transcript/TranscriptView";
 
 export function TranscriptPanel() {
   const transcript = useEditorStore((s) => s.transcript);
@@ -35,7 +32,11 @@ export function TranscriptPanel() {
       ) : status.state === "error" ? (
         <ErrorState message={status.message} onRetry={() => void start()} />
       ) : transcript ? (
-        <TranscriptText transcript={transcript} />
+        transcript.words.length === 0 ? (
+          <p className="p-8 text-center text-sm text-muted">No speech was detected in this video.</p>
+        ) : (
+          <TranscriptView transcript={transcript} />
+        )
       ) : (
         <EmptyState onStart={() => void start()} />
       )}
@@ -105,38 +106,6 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
           Try again
         </button>
       </div>
-    </div>
-  );
-}
-
-/** Read-only display for now; click-to-seek and live highlighting arrive in step 3. */
-function TranscriptText({ transcript }: { transcript: Transcript }) {
-  const paragraphs = useMemo(() => groupParagraphs(transcript.words), [transcript]);
-  const multiSpeaker = useMemo(
-    () => new Set(transcript.words.map((w) => w.speaker)).size > 1,
-    [transcript],
-  );
-
-  if (transcript.words.length === 0) {
-    return <p className="p-8 text-center text-sm text-muted">No speech was detected in this video.</p>;
-  }
-
-  return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-      {paragraphs.map((p) => (
-        <div key={p.startIndex} className="mb-5 grid grid-cols-[3.5rem_1fr] gap-3">
-          <div className="pt-0.5 text-xs tabular-nums text-muted">
-            {formatTime(p.start)}
-            {multiSpeaker && p.speaker !== undefined && <div className="mt-1 text-accent-2">S{p.speaker + 1}</div>}
-          </div>
-          <p className="text-[15px] leading-7">
-            {transcript.words
-              .slice(p.startIndex, p.endIndex)
-              .map((w) => w.text)
-              .join(" ")}
-          </p>
-        </div>
-      ))}
     </div>
   );
 }

@@ -10,6 +10,11 @@ export interface RawWord {
 /** A word in the project transcript, timed in source-video seconds. Never mutated after creation. */
 export interface Word extends RawWord {
   id: string;
+  /**
+   * Index of the audio chunk the word was transcribed in. Speaker numbers are
+   * only comparable within one chunk. Absent in transcripts saved before step 3.
+   */
+  chunk?: number;
 }
 
 export interface Transcript {

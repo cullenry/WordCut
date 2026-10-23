@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Envelope } from "@/lib/audio/envelope";
 import { loadProject, projectIdFor, saveProject, type ProjectRecord } from "@/lib/persistence/projects";
 import type { VideoMeta } from "@/lib/probe";
+import type { Selection } from "@/lib/transcript/selection";
 import type { Transcript } from "@/lib/transcript/types";
 import { transcribeFile, type TranscribeProgress } from "@/lib/transcription/transcribe";
 
@@ -24,6 +25,8 @@ interface EditorState {
   transcript: Transcript | null;
   envelope: Envelope | null;
   transcription: TranscriptionStatus;
+  /** Word-range selection in the transcript; ids only, the transcript itself is never touched. */
+  selection: Selection | null;
   currentTime: number;
   playing: boolean;
   video: HTMLVideoElement | null;
@@ -31,6 +34,7 @@ interface EditorState {
   clearSource: () => void;
   startTranscription: () => Promise<void>;
   cancelTranscription: () => void;
+  setSelection: (selection: Selection | null) => void;
   setCurrentTime: (t: number) => void;
   setPlaying: (p: boolean) => void;
   registerVideo: (el: HTMLVideoElement | null) => void;
@@ -46,6 +50,7 @@ const emptyProjectState = {
   transcript: null,
   envelope: null,
   transcription: { state: "idle" } as TranscriptionStatus,
+  selection: null as Selection | null,
   currentTime: 0,
   playing: false,
 };
@@ -94,7 +99,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         },
       });
       if (get().projectId !== projectId) return;
-      set({ transcript, envelope, restored: false, transcription: { state: "idle" } });
+      set({ transcript, envelope, restored: false, selection: null, transcription: { state: "idle" } });
 
       const now = Date.now();
       const record: ProjectRecord = {
@@ -130,6 +135,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     abortCtrl?.abort();
   },
 
+  setSelection: (selection) => set({ selection }),
   setCurrentTime: (currentTime) => set({ currentTime }),
   setPlaying: (playing) => set({ playing }),
   registerVideo: (video) => set({ video }),

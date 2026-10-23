@@ -11,7 +11,8 @@ import {
 import { getUsageMeter, UsageLimitError, type UsageContext } from "@/server/usage/meter";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// AssemblyAI queues each chunk and is polled until done, which can take a few minutes for a long chunk.
+export const maxDuration = 300;
 
 const fail = (error: string, status: number) => NextResponse.json({ error }, { status });
 

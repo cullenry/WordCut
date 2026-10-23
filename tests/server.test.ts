@@ -54,9 +54,27 @@ describe("getTranscriptionProvider", () => {
     expect(() => getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "deepgram" })).toThrow(/DEEPGRAM_API_KEY/);
   });
 
-  it("rejects unknown and unimplemented providers with a config error", () => {
+  it("selects AssemblyAI and OpenAI, ignoring case and whitespace", () => {
+    expect(getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: " AssemblyAI ", ASSEMBLYAI_API_KEY: "k" }).name).toBe(
+      "assemblyai",
+    );
+    expect(getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "openai", OPENAI_API_KEY: "k" }).name).toBe("openai");
+  });
+
+  it("asks for the key of the selected provider, not another one", () => {
+    expect(() =>
+      getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "openai", DEEPGRAM_API_KEY: "k" }),
+    ).toThrow(/OPENAI_API_KEY/);
+    expect(() => getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "assemblyai" })).toThrow(/ASSEMBLYAI_API_KEY/);
+  });
+
+  it("treats an empty provider as the default", () => {
+    expect(getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "", DEEPGRAM_API_KEY: "k" }).name).toBe("deepgram");
+  });
+
+  it("rejects unknown providers with a config error", () => {
     expect(() => getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "nope" })).toThrow(ProviderConfigError);
-    expect(() => getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "openai" })).toThrow(/not implemented/);
+    expect(() => getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "__proto__" })).toThrow(/Unknown/);
   });
 
   it("reads the language with an English default", () => {

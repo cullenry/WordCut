@@ -1,5 +1,5 @@
 import type { RawWord } from "@/lib/transcript/types";
-import { ProviderError, type ProviderResult, type TranscriptionProvider } from "./provider";
+import { providerHttpError, type ProviderResult, type TranscriptionProvider } from "./provider";
 
 const ENDPOINT = "https://api.deepgram.com/v1/listen";
 
@@ -59,14 +59,7 @@ export function createDeepgramProvider(apiKey: string, model = "nova-3"): Transc
         body: audio,
         signal,
       });
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        const msg =
-          res.status === 401 || res.status === 403
-            ? "Deepgram rejected the API key. Check DEEPGRAM_API_KEY."
-            : `Deepgram error ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`;
-        throw new ProviderError(msg, res.status);
-      }
+      if (!res.ok) throw await providerHttpError(res, "Deepgram", "DEEPGRAM_API_KEY");
       return normalizeDeepgramResponse((await res.json()) as DeepgramResponse);
     },
   };

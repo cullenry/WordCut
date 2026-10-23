@@ -21,6 +21,7 @@ import { captionCharacters } from "@/lib/captions/fonts";
 import { renderClipFrame } from "@/lib/captions/frame";
 import { captionFont } from "@/lib/captions/render";
 import { cropRect } from "@/lib/clips/crop";
+import { missingWebCodecsApis } from "@/lib/media/support";
 import { SegmentWriter, fadeSamples, packPlanar } from "./audio";
 import {
   RESOLUTION_IDS,
@@ -78,7 +79,6 @@ scope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   }
 };
 
-const REQUIRED_APIS = ["VideoDecoder", "VideoEncoder", "AudioDecoder", "AudioEncoder", "OffscreenCanvas"] as const;
 /** In order of preference; all of them can go in an MP4. H.264 plays everywhere, so it wins whenever it works. */
 const VIDEO_CODECS: VideoCodecId[] = ["avc", "hevc", "vp9", "av1"];
 const AAC_RATES = [44_100, 48_000];
@@ -88,7 +88,7 @@ function openInput(file: File): Input {
 }
 
 async function probe(file: File): Promise<ProbeResult> {
-  const missing = REQUIRED_APIS.filter((name) => !(name in globalThis));
+  const missing = missingWebCodecsApis();
   if (missing.length) {
     return {
       ok: false,

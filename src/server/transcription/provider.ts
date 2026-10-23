@@ -33,3 +33,18 @@ export class ProviderError extends Error {
     super(message);
   }
 }
+
+/** Turns a failed upstream response into a ProviderError, naming the env var to check on auth failures. */
+export async function providerHttpError(res: Response, provider: string, keyEnv: string): Promise<ProviderError> {
+  const detail = await res.text().catch(() => "");
+  const msg =
+    res.status === 401 || res.status === 403
+      ? `${provider} rejected the API key. Check ${keyEnv}.`
+      : `${provider} error ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`;
+  return new ProviderError(msg, res.status);
+}
+
+/** "audio/ogg; codecs=opus" -> "audio/ogg". */
+export function baseMimeType(mimeType: string): string {
+  return mimeType.split(";")[0].trim().toLowerCase();
+}

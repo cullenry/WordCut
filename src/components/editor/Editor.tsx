@@ -5,6 +5,7 @@ import { Logo } from "@/components/ui/Logo";
 import { sourceToEdited } from "@/lib/edl/time";
 import { formatBytes, formatTime } from "@/lib/format";
 import { flushPendingSave, selectPlayEdl, useEditorStore } from "@/store/editor-store";
+import { BrowserSupportBanner } from "./BrowserSupportBanner";
 import { DropZone } from "./DropZone";
 import { ExportDialog } from "./export/ExportDialog";
 import { ExportPill } from "./export/ExportPill";
@@ -102,6 +103,7 @@ export function Editor() {
           </div>
         )}
       </header>
+      <BrowserSupportBanner />
 
       {!source ? (
         <DropZone />

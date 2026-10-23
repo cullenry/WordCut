@@ -1,23 +1,28 @@
+import { createAssemblyAIProvider } from "./assemblyai";
 import { createDeepgramProvider } from "./deepgram";
+import { createOpenAIProvider } from "./openai";
 import { ProviderConfigError, type TranscriptionProvider } from "./provider";
 
 type Env = Record<string, string | undefined>;
 
+const PROVIDERS = {
+  deepgram: { keyEnv: "DEEPGRAM_API_KEY", create: (key: string) => createDeepgramProvider(key) },
+  assemblyai: { keyEnv: "ASSEMBLYAI_API_KEY", create: (key: string) => createAssemblyAIProvider(key) },
+  openai: { keyEnv: "OPENAI_API_KEY", create: (key: string) => createOpenAIProvider(key) },
+} as const;
+
 /** Builds the provider selected by TRANSCRIPTION_PROVIDER (default: deepgram). */
 export function getTranscriptionProvider(env: Env = process.env): TranscriptionProvider {
-  const name = (env.TRANSCRIPTION_PROVIDER ?? "deepgram").trim().toLowerCase();
-  switch (name) {
-    case "deepgram": {
-      const key = env.DEEPGRAM_API_KEY?.trim();
-      if (!key) throw new ProviderConfigError("DEEPGRAM_API_KEY is not set. Add it to .env.local and restart the server.");
-      return createDeepgramProvider(key);
-    }
-    case "assemblyai":
-    case "openai":
-      throw new ProviderConfigError(`The ${name} provider is not implemented yet. Use TRANSCRIPTION_PROVIDER=deepgram.`);
-    default:
-      throw new ProviderConfigError(`Unknown TRANSCRIPTION_PROVIDER "${name}".`);
+  const name = (env.TRANSCRIPTION_PROVIDER?.trim() || "deepgram").toLowerCase();
+  if (!Object.hasOwn(PROVIDERS, name)) {
+    throw new ProviderConfigError(
+      `Unknown TRANSCRIPTION_PROVIDER "${name}". Use one of: ${Object.keys(PROVIDERS).join(", ")}.`,
+    );
   }
+  const { keyEnv, create } = PROVIDERS[name as keyof typeof PROVIDERS];
+  const key = env[keyEnv]?.trim();
+  if (!key) throw new ProviderConfigError(`${keyEnv} is not set. Add it to .env.local and restart the server.`);
+  return create(key);
 }
 
 export function getTranscriptionLanguage(env: Env = process.env): string {

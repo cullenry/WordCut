@@ -10,6 +10,7 @@
   --color-accent: #7c5cff;
   --color-accent-2: #a78bfa;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
 }
 
 html,
@@ -27,6 +28,7 @@ body {
 
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 /* Pressable feedback. */
@@ -129,7 +131,66 @@ dialog.dialog[open]::backdrop {
   }
 }
 
+/*
+ * Landing-page transcript demo. Unlike the editor, the strike is drawn: the
+ * demo exists to show what a cut is, and it is clicked a handful of times, not hundreds.
+ */
+.demo-word {
+  position: relative;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+.demo-word::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: 56%;
+  height: 1.5px;
+  background: var(--color-accent-2);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms var(--ease-out);
+}
+.demo-word[aria-pressed="true"] {
+  color: color-mix(in oklab, var(--color-fg) 32%, transparent);
+}
+.demo-word[aria-pressed="true"]::after {
+  transform: scaleX(1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .demo-word:hover {
+    background: rgb(255 255 255 / 0.08);
+  }
+}
+.demo-word:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* One tick per word on the demo's tracks. Kept words slide to their edited time; cut ones fade. */
+.demo-tick {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-accent-2);
+  transition: transform 320ms var(--ease-in-out), opacity 200ms ease;
+}
+.demo-tick.is-cut {
+  opacity: 0.18;
+}
+.demo-tick.is-gone {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .demo-word::after,
+  .demo-tick {
+    transition-property: opacity;
+  }
   .sheet {
     @starting-style {
       transform: none;

@@ -13,6 +13,29 @@ export function Timeline() {
   const seekEdited = useEditorStore((s) => s.seekEdited);
   const trackRef = useRef<HTMLDivElement>(null);
   const marks = useMemo(() => editedCuts(edl), [edl]);
+  const cleanup = useEditorStore((s) => s.cleanup);
+  // Where the open cleanup review would act, on the edited timeline.
+  const review = useMemo(() => {
+    if (!cleanup) return [];
+    return [
+      ...cleanup.plan.silences.map((s) => ({
+        kind: "silence" as const,
+        key: s.key,
+        included: s.included,
+        from: sourceToEdited(edl, s.cutStart),
+        to: sourceToEdited(edl, s.cutEnd),
+        label: `Pause ${formatDuration(s.pause)} \u2192 ${formatDuration(s.keep)}`,
+      })),
+      ...cleanup.plan.fillers.map((f) => ({
+        kind: "filler" as const,
+        key: f.key,
+        included: f.included,
+        from: sourceToEdited(edl, f.start),
+        to: sourceToEdited(edl, f.end),
+        label: f.text,
+      })),
+    ];
+  }, [cleanup, edl]);
 
   const duration = edl.duration;
   const edited = sourceToEdited(edl, currentTime);
@@ -65,6 +88,18 @@ export function Timeline() {
             <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-bg" />
             <div className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-b-full bg-red-400/80" />
           </div>
+        ))}
+        {review.map((m) => (
+          <div
+            key={m.key}
+            title={m.label}
+            className={`pointer-events-none absolute min-w-[3px] ${
+              m.kind === "silence"
+                ? `inset-y-0 border-x ${m.included ? "border-amber-400 bg-amber-400/35" : "border-amber-400/40 bg-amber-400/10"}`
+                : `bottom-0 h-1/3 ${m.included ? "bg-amber-300" : "bg-amber-300/30"}`
+            }`}
+            style={{ left: `${(m.from / duration) * 100}%`, width: `${((m.to - m.from) / duration) * 100}%` }}
+          />
         ))}
         <div className="absolute inset-y-0 w-0.5 bg-accent" style={{ left: `${pct}%` }} />
       </div>

@@ -2,6 +2,7 @@
 
 import type { TranscriptionStatus } from "@/store/editor-store";
 import { useEditorStore } from "@/store/editor-store";
+import { CleanupPanel } from "./transcript/CleanupPanel";
 import { EditToolbar } from "./transcript/EditToolbar";
 import { TranscriptView } from "./transcript/TranscriptView";
 
@@ -44,6 +45,7 @@ export function TranscriptPanel() {
           <>
             <EditToolbar transcript={transcript} />
             <TranscriptView transcript={transcript} />
+            <CleanupPanel />
           </>
         )
       ) : (

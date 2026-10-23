@@ -1,4 +1,5 @@
 import type { Word } from "@/lib/transcript/types";
+import { subtractSpans, trimSpans, type TrimMap } from "./trims";
 
 /**
  * A kept span of the source video, half-open [start, end) in source seconds.
@@ -25,6 +26,11 @@ export interface EdlOptions {
    * capped at this. Two such joins give a pause of at most twice this.
    */
   padSeconds?: number;
+  /**
+   * Shortened pauses (see SilenceTrim). Their spans are removed from whatever
+   * the word cuts keep, so a trim composes with deletions and never clips a word.
+   */
+  trims?: TrimMap;
 }
 
 export const DEFAULT_PAD_SECONDS = 0.25;
@@ -46,13 +52,15 @@ export const roundTime = (t: number): number => Math.round(t * 1e6) / 1e6;
  * - Silence before the first word goes with the first word, and silence after
  *   the last word with the last, so deleting everything leaves nothing.
  *
+ * Trims then carve the middle out of the pauses they name.
+ *
  * Words must be sorted by start time. With no words the whole source is kept.
  */
 export function buildEdl(
   words: readonly Word[],
   deleted: ReadonlySet<string>,
   sourceDuration: number,
-  { padSeconds = DEFAULT_PAD_SECONDS }: EdlOptions = {},
+  { padSeconds = DEFAULT_PAD_SECONDS, trims }: EdlOptions = {},
 ): Edl {
   const total = Math.max(0, sourceDuration);
   const spans: { start: number; end: number }[] = [];
@@ -80,7 +88,7 @@ export function buildEdl(
     if (runStart >= 0) spans.push({ start: runStart, end: total });
   }
 
-  return fromSpans(spans, total);
+  return fromSpans(trims?.size ? subtractSpans(spans, trimSpans(words, trims)) : spans, total);
 }
 
 /** Where ownership passes from word `a` to the next word `b`. */

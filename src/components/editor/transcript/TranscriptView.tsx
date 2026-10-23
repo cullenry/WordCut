@@ -60,6 +60,14 @@ export function TranscriptView({ transcript }: { transcript: Transcript }) {
   const selection = useEditorStore((s) => s.selection);
   const deleted = useEditorStore((s) => s.deleted);
   const edl = useEditorStore((s) => s.edl);
+  const cleanup = useEditorStore((s) => s.cleanup);
+  // Word id -> ticked, for every filler the open cleanup review lists.
+  const review = useMemo(() => {
+    if (!cleanup) return null;
+    const map = new Map<string, boolean>();
+    for (const f of cleanup.plan.fillers) for (const id of f.ids) map.set(id, f.included);
+    return map;
+  }, [cleanup]);
   const selRange = useMemo(() => selectionRange(selection, wordIndex), [selection, wordIndex]);
 
   // --- Follow mode: auto-scroll with playback until the user scrolls away. ---
@@ -268,6 +276,7 @@ export function TranscriptView({ transcript }: { transcript: Transcript }) {
         top={offsets[i]}
         words={words}
         deleted={deleted}
+        review={review}
         time={edl ? sourceToEdited(edl, p.start) : p.start}
         mark={marks[i]}
         active={activeIndex >= p.startIndex && activeIndex < p.endIndex ? activeIndex : -1}

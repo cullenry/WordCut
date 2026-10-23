@@ -1,13 +1,24 @@
 import type { WordRange } from "@/lib/transcript/selection";
 import type { Word } from "@/lib/transcript/types";
+import type { TrimMap } from "./trims";
+
+/** One pause changing from `before` to `after` seconds kept (null = not trimmed). */
+export interface TrimChange {
+  afterId: string;
+  before: number | null;
+  after: number | null;
+}
 
 /**
- * One undoable change to the deleted-word set. `ids` lists only the words whose
+ * One undoable change to the edits. `ids` lists only the words whose deleted
  * state actually changed, so applying the inverse restores the exact prior set.
+ * `trims` (cleanup only) records pauses changed in the same step, with their old
+ * value, so one undo reverts a whole cleanup.
  */
 export interface EditOp {
   kind: "delete" | "restore";
   ids: readonly string[];
+  trims?: readonly TrimChange[];
 }
 
 /** The op that deletes every not-yet-deleted word in `ids`, or null if there is none. */
@@ -30,8 +41,23 @@ export function applyOp(deleted: ReadonlySet<string>, op: EditOp): ReadonlySet<s
   return next;
 }
 
+/** Returns a new map; the input is never mutated. */
+export function applyTrims(trims: TrimMap, op: EditOp): TrimMap {
+  if (!op.trims?.length) return trims;
+  const next = new Map(trims);
+  for (const c of op.trims) {
+    if (c.after === null) next.delete(c.afterId);
+    else next.set(c.afterId, c.after);
+  }
+  return next;
+}
+
 export function invertOp(op: EditOp): EditOp {
-  return { kind: op.kind === "delete" ? "restore" : "delete", ids: op.ids };
+  return {
+    kind: op.kind === "delete" ? "restore" : "delete",
+    ids: op.ids,
+    ...(op.trims && { trims: op.trims.map((c) => ({ afterId: c.afterId, before: c.after, after: c.before })) }),
+  };
 }
 
 /** True when every word in the (non-empty) range is deleted. */

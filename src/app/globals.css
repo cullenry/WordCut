@@ -47,6 +47,24 @@ body {
 }
 
 /*
+ * Docked review sheet. Opened by a click, not a key, and used once per session
+ * at most, so a short ease-out is fine; closing is instant.
+ */
+.sheet {
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* A long list of items only paints what is on screen. */
+.item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 28px;
+}
+
+/*
  * Cut words: dimmed and struck through, in place. Deliberately no transition:
  * cutting and restoring happen dozens of times a session and must feel instant.
  * Hovering a run brightens it and tints the strike, hinting that a click restores it.
@@ -70,6 +88,11 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .sheet {
+    @starting-style {
+      transform: none;
+    }
+  }
   .press:active {
     transform: none;
   }

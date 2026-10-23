@@ -19,7 +19,8 @@ export function EditToolbar({ transcript }: { transcript: Transcript }) {
   const canUndo = useEditorStore((s) => s.history.past.length > 0);
   const canRedo = useEditorStore((s) => s.history.future.length > 0);
   const removed = useEditorStore((s) => (s.edl ? s.edl.sourceDuration - s.edl.duration : 0));
-  const { undo, redo, toggleSelection } = useEditorStore.getState();
+  const reviewing = useEditorStore((s) => s.cleanup !== null);
+  const { undo, redo, toggleSelection, openCleanup, closeCleanup } = useEditorStore.getState();
 
   const range = useMemo(() => selectionRange(selection, wordIndex), [selection, wordIndex]);
   const restoring = useMemo(() => allDeleted(words, deleted, range), [words, deleted, range]);
@@ -41,6 +42,17 @@ export function EditToolbar({ transcript }: { transcript: Transcript }) {
       >
         {restoring ? "Restore" : "Delete"}
         <kbd className="rounded border border-border px-1 font-sans text-[10px] text-muted">⌫</kbd>
+      </button>
+      <button
+        onClick={reviewing ? closeCleanup : openCleanup}
+        aria-pressed={reviewing}
+        title="Find fillers (um, uh) and long pauses, and review them before removing"
+        className={`press flex items-center gap-1.5 rounded-md px-2 py-1 text-xs hover:bg-panel-2 ${reviewing ? "bg-panel-2" : ""}`}
+      >
+        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l1.5 1.5M10.5 10.5 12 12M12 4l-1.5 1.5M5.5 10.5 4 12" />
+        </svg>
+        Clean up
       </button>
       {deleted.size > 0 && (
         <span className="ml-auto text-xs tabular-nums text-muted">

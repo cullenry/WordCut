@@ -1,5 +1,6 @@
 import type { Envelope } from "@/lib/audio/envelope";
 import type { VideoMeta } from "@/lib/probe";
+import type { SilenceTrim } from "@/lib/edl/trims";
 import type { Transcript } from "@/lib/transcript/types";
 
 /**
@@ -23,6 +24,8 @@ export interface ProjectRecord {
 /** The user's edits. Word ids refer to `transcript`; the transcript itself is never changed. */
 export interface SavedEdits {
   deletedWordIds: string[];
+  /** Shortened pauses. Absent in projects saved before cleanup existed. */
+  silenceTrims?: SilenceTrim[];
 }
 
 const DB_NAME = "wordcut";

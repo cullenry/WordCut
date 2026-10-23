@@ -6,8 +6,9 @@ description: How WordCut maps between source-video time and edited time after cu
 # Source time vs edited time
 
 WordCut never changes the video or the transcript. Words keep their **source time**
-(seconds in the original file) forever. Cuts are a set of deleted word ids, and the
-**EDL** (edit decision list) turns those into the source spans that survive. The
+(seconds in the original file) forever. Cuts are a set of deleted word ids plus a set of
+**silence trims** (shortened pauses), and the **EDL** (edit decision list) turns those into
+the source spans that survive. The
 **edited time** is a position in the video you would get by playing those spans
 back to back.
 
@@ -16,9 +17,10 @@ and `tests/time.test.ts`):
 
 | File | What it does |
 | --- | --- |
-| `edl.ts` | `buildEdl(words, deleted, sourceDuration)` → `Edl`; `fromSpans`, `removedRanges`, `editedCuts`, `roundTime` |
+| `edl.ts` | `buildEdl(words, deleted, sourceDuration, { trims })` → `Edl`; `fromSpans`, `removedRanges`, `editedCuts`, `roundTime` |
+| `trims.ts` | `SilenceTrim`, `trimSpans` (trims → removed source spans), `subtractSpans`, `sanitizeTrims` |
 | `time.ts` | `sourceToEdited`, `editedToSource`, `snapToKept`, `playbackJump`, `secondsUntilJump`, `rangeIndexAt` |
-| `edits.ts` | Undoable ops on the deleted-id set (`deleteOp`, `restoreOp`, `applyOp`, `invertOp`) |
+| `edits.ts` | Undoable ops on the deleted-id set and trims (`deleteOp`, `restoreOp`, `applyOp`, `applyTrims`, `invertOp`) |
 | `history.ts` | Generic undo/redo stacks |
 
 ## Which time is which in the app
@@ -95,6 +97,66 @@ Delete **b** and **d**:
 Kept: `[0, 1.55)` @0, `[2.75, 3.4)` @1.55, `[3.9, 6)` @2.2. Duration 4.3.
 
 Deleting **b and c** gives one cut `[1.55, 3.4)`, in whatever order they were deleted.
+
+## Silence trims (shortened pauses)
+
+Cleanup (step 5) shortens long pauses without deleting any word. `Word[]` stays immutable, so a
+shortened pause is stored as data next to the deleted ids, not as a change to the words:
+
+```ts
+interface SilenceTrim { afterId: string; keep: number } // store: trims: Map<afterId, keep>
+```
+
+"The pause after word `afterId` is cut down to `keep` seconds" (default 0.3). The gap is always
+between `words[i]` and `words[i + 1]`; the pause before the first word and after the last word
+are never trimmed (those already belong to the first/last word, see the pause rule).
+
+`trimSpans(words, trims)` turns each trim into a removed source span: the **middle** of the pause,
+`keep / 2` clear of both words:
+
+```
+removed = [a.end + keep/2, b.start - keep/2]     (only if pause > keep)
+```
+
+`buildEdl` builds the kept spans from deleted words first, then **subtracts** the trim spans
+(`subtractSpans`) before `fromSpans` rounds and assigns offsets. So there is still one EDL, one
+time mapping, one playback path, and nothing downstream (timeline, seek, captions, export) needs to
+know trims exist: a trim is just one more cut inside a kept range.
+
+Why this composes safely:
+- The span lies strictly inside a pause, so a trim can never clip a word, whatever `keep` is.
+- Combined with a deletion beside the pause, the result is whichever removes more. The pause rule
+  keeps up to 0.25 s next to a kept word; a trim with `keep = 0.1` then trims that to 0.05 + 0.05.
+  Cleanup avoids this overlap by never trimming a pause next to a deleted word (or a filler it is
+  about to delete), because the pause rule already shortens those.
+- Trimming a pause that sits wholly inside a deleted run changes nothing.
+
+### Worked example 4: a trim
+
+Source is 12 s. Words: `a 1–2`, `b 4–5`, `c 5.1–6`, `d 9–10`. Pause after `a` is 2 s. Trim `{ afterId: "w0", keep: 0.4 }`:
+
+- Removed span = `[2 + 0.2, 4 - 0.2]` = `[2.2, 3.8]` (1.6 s). The pause plays as 0.2 s + 0.2 s = 0.4 s.
+- Kept: `[0, 2.2)` @0, `[3.8, 12)` @2.2. Duration 10.4.
+
+| source t | edited | why |
+| --- | --- | --- |
+| 5 (end of b) | 3.4 | 5 − 1.6 |
+| 3 | 2.2 | inside the removed span, resumes at the next range's offset |
+
+| edited e | source | why |
+| --- | --- | --- |
+| 3.4 | 5 | |
+| 2.2 | 3.8 | on the join |
+
+### One undo for a whole cleanup
+
+A cleanup is **one** history entry. `EditOp` has an optional `trims: { afterId, before, after }[]`
+next to `ids`. `applyOp` handles `ids`, `applyTrims` handles `trims`, and `invertOp` swaps
+`before`/`after` and flips delete/restore, so one Ctrl+Z reverts every filler and every pause. `before` is
+the earlier keep (or `null`), so re-trimming an already trimmed pause also undoes exactly.
+
+Trims are saved with the project as `edits.silenceTrims` (absent in older projects) and checked
+with `sanitizeTrims`, like deleted ids. They are cleared on re-transcribe.
 
 ## Mapping functions
 
@@ -175,7 +237,12 @@ Ranges `[1, 2)` and `[3, 5)`, lookahead 0.03:
 
 The timeline is drawn in **edited** time: kept ranges laid end to end. `editedCuts(edl)`
 gives one `{ at, removed }` per cut, where `at` is the join on the edited timeline (0 for a cut
-lead-in, `duration` for a cut tail). Each is drawn as a gap with a marker.
+lead-in, `duration` for a cut tail). Each is drawn as a gap with a marker. A trimmed pause is a
+cut like any other, so it gets a marker too.
+
+While the cleanup review is open nothing is applied yet, so its markers are drawn on the
+**current** edited timeline: each pause as the band `sourceToEdited(cutStart)`..`sourceToEdited(cutEnd)`
+(the part that will go; both ends are inside a kept range) and each filler at its word's span.
 
 ## Pitfalls
 
@@ -189,5 +256,7 @@ lead-in, `duration` for a cut tail). Each is drawn as a gap with a marker.
 - Word ids are positional (`w0`, `w1`, …). Re-transcribing makes old deleted ids meaningless,
   so edits and history are reset when a new transcript arrives, and `sanitizeDeleted` drops
   unknown ids when loading a saved project.
-- Never mutate `deleted`. Every edit makes a new `Set` and a new EDL. History stores the ops
+- Trims are keyed by the id of the word **before** the gap. Don't key them by time: the transcript
+  is the source of truth for where a pause is, and a trim must keep meaning the same pause.
+- Never mutate `deleted` or `trims`. Every edit makes a new `Set`/`Map` and a new EDL. History stores the ops
   (only the ids that changed), not snapshots, so undo stays cheap on 20k-word transcripts.

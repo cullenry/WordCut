@@ -13,6 +13,8 @@ interface RowProps {
   words: Word[];
   /** Cut word ids; a new set on every edit, so rows re-render when cuts change. */
   deleted: ReadonlySet<string>;
+  /** Fillers listed by an open cleanup review (word id -> will be removed), or null. */
+  review: ReadonlyMap<string, boolean> | null;
   /** Paragraph start on the edited timeline. */
   time: number;
   mark: SpeakerMark;
@@ -36,6 +38,7 @@ export const TranscriptRow = memo(function TranscriptRow({
   top,
   words,
   deleted,
+  review,
   time,
   mark,
   active,
@@ -84,7 +87,11 @@ export const TranscriptRow = memo(function TranscriptRow({
         ? "bg-accent text-white"
         : isSelected(i)
           ? "bg-accent/30"
-          : "[@media(hover:hover)]:hover:bg-white/10";
+          : review?.has(words[i].id)
+            ? review.get(words[i].id)
+              ? "bg-amber-400/25 text-amber-100"
+              : "underline decoration-amber-400/60 decoration-dotted underline-offset-4"
+            : "[@media(hover:hover)]:hover:bg-white/10";
     spans.push(
       <span key={words[i].id} data-i={i} className={`cursor-pointer rounded-[3px] ${cls}`}>
         {words[i].text}

@@ -1,5 +1,5 @@
 import { normalizeCaptions } from "@/lib/captions/types";
-import { clampOffset } from "./crop";
+import { cropFromOffset, normalizeCrop, sameCrop } from "./crop";
 import type { Word } from "@/lib/transcript/types";
 import { MAX_CLIP_NAME, newClip, type Clip, type ClipPatch } from "./types";
 
@@ -62,7 +62,7 @@ export function invertClipOp(op: ClipOp): ClipOp {
 export function patchClip(clip: Clip, patch: ClipPatch): Clip {
   return {
     ...clip,
-    cropOffset: patch.cropOffset === undefined ? clip.cropOffset : clampOffset(patch.cropOffset),
+    crop: patch.crop === undefined ? clip.crop : normalizeCrop(patch.crop),
     captions: patch.captions ? normalizeCaptions({ ...clip.captions, ...patch.captions }) : clip.captions,
   };
 }
@@ -72,20 +72,20 @@ export function editOp(clip: Clip, patch: ClipPatch): ClipOp | null {
   const next = patchClip(clip, patch);
   const before: ClipPatch = {};
   const after: ClipPatch = {};
-  if (next.cropOffset !== clip.cropOffset) {
-    before.cropOffset = clip.cropOffset;
-    after.cropOffset = next.cropOffset;
+  if (!sameCrop(next.crop, clip.crop)) {
+    before.crop = clip.crop;
+    after.crop = next.crop;
   }
   for (const key of Object.keys(clip.captions) as (keyof Clip["captions"])[]) {
     if (next.captions[key] === clip.captions[key]) continue;
     (before.captions ??= {})[key] = clip.captions[key] as never;
     (after.captions ??= {})[key] = next.captions[key] as never;
   }
-  return before.cropOffset === undefined && !before.captions ? null : { kind: "clip-edit", id: clip.id, before, after };
+  return !before.crop && !before.captions ? null : { kind: "clip-edit", id: clip.id, before, after };
 }
 
 const keysOf = (p: ClipPatch): string =>
-  [...(p.cropOffset === undefined ? [] : ["cropOffset"]), ...Object.keys(p.captions ?? {}).map((k) => `captions.${k}`)]
+  [...(p.crop === undefined ? [] : ["crop"]), ...Object.keys(p.captions ?? {}).map((k) => `captions.${k}`)]
     .sort()
     .join(",");
 
@@ -153,7 +153,8 @@ export function sanitizeClips(saved: unknown, sourceDuration: number): Clip[] {
     const name = typeof r.name === "string" ? cleanClipName(r.name) : null;
     out.push({
       ...newClip({ id, name: name ?? `Clip ${out.length + 1}`, start, end }),
-      cropOffset: typeof r.cropOffset === "number" ? clampOffset(r.cropOffset) : 0,
+      // Projects saved before free cropping have only a 9:16 slider position.
+      crop: !r.crop && typeof r.cropOffset === "number" ? cropFromOffset(r.cropOffset) : normalizeCrop(r.crop),
       captions: normalizeCaptions(r.captions),
     });
   }

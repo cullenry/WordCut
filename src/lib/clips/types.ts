@@ -1,4 +1,5 @@
 import { DEFAULT_CAPTIONS, type CaptionSettings } from "@/lib/captions/types";
+import { DEFAULT_CROP, type Crop } from "./crop";
 
 /**
  * A clip: a range of the source video with a name. It stores source seconds
@@ -11,14 +12,14 @@ export interface Clip {
   /** Source seconds, [start, end). */
   start: number;
   end: number;
-  /** Where the 9:16 crop sits on the slack axis: -1 = left/top edge, 0 = centre, 1 = right/bottom edge. */
-  cropOffset: number;
+  /** The part of the source frame the clip shows, and so the clip's shape (see crop.ts). */
+  crop: Crop;
   captions: CaptionSettings;
 }
 
 /** The parts of a clip an inspector edits. Only the keys present change. */
 export interface ClipPatch {
-  cropOffset?: number;
+  crop?: Crop;
   captions?: Partial<CaptionSettings>;
 }
 
@@ -28,6 +29,6 @@ export const MIN_CLIP_DURATION = 0.05;
 
 export const newClip = (fields: Pick<Clip, "id" | "name" | "start" | "end">): Clip => ({
   ...fields,
-  cropOffset: 0,
+  crop: { ...DEFAULT_CROP },
   captions: { ...DEFAULT_CAPTIONS },
 });

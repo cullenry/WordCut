@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { primaryButton, secondaryButton } from "@/components/ui/buttons";
 import { captionPagesFor } from "@/lib/captions/words";
+import { cropAspectLabel, cropRatio } from "@/lib/clips/crop";
 import { clipEdl } from "@/lib/clips/range";
 import type { Clip } from "@/lib/clips/types";
 import { formatBytes, formatDuration } from "@/lib/format";
@@ -10,10 +11,10 @@ import { ExportWorker, probeExport } from "@/lib/media/export/client";
 import {
   DEFAULT_RESOLUTION,
   RESOLUTION_IDS,
-  RESOLUTIONS,
   codecName,
   exportFileName,
   formatFrameRate,
+  outputSizes,
   type ResolutionId,
 } from "@/lib/media/export/plan";
 import { formatRemaining, percentOf } from "@/lib/media/export/progress";
@@ -85,6 +86,9 @@ function Dialog({ clip }: { clip: Clip }) {
 
 function Setup({ clip, busy, onCancel }: { clip: Clip; busy: boolean; onCancel: () => void }) {
   const file = useEditorStore((s) => s.source!.file);
+  const meta = useEditorStore((s) => s.source!.meta);
+  const ratio = cropRatio(clip.crop, meta.width, meta.height);
+  const sizes = useMemo(() => outputSizes(ratio), [ratio]);
   const edl = useEditorStore((s) => s.edl);
   const duration = useMemo(() => (edl ? clipEdl(edl, clip.start, clip.end).duration : 0), [edl, clip.start, clip.end]);
   const [probe, setProbe] = useState<ProbeResult | null>(null);
@@ -94,13 +98,13 @@ function Setup({ clip, busy, onCancel }: { clip: Clip; busy: boolean; onCancel: 
 
   useEffect(() => {
     let live = true;
-    probeExport(file)
+    probeExport(file, sizes)
       .then((r) => live && setProbe(r))
       .catch((e: unknown) => live && setProbe({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
     return () => {
       live = false;
     };
-  }, [file]);
+  }, [file, sizes]);
 
   // Fall back to the other size if this browser can only encode one of them.
   const encoders = probe?.ok ? probe.encoders : null;
@@ -122,8 +126,8 @@ function Setup({ clip, busy, onCancel }: { clip: Clip; busy: boolean; onCancel: 
       clipEdl: ce,
       pages,
       captions: clip.captions,
-      cropOffset: clip.cropOffset,
-      ...RESOLUTIONS[res],
+      crop: clip.crop,
+      ...sizes[res],
       frameRate: probe.frameRate,
       video,
       audio: audio?.encoder ?? null,
@@ -169,14 +173,14 @@ function Setup({ clip, busy, onCancel }: { clip: Clip; busy: boolean; onCancel: 
   return (
     <>
       <p className="mt-1 text-xs text-ink-2">
-        {formatDuration(duration)} · 9:16 · cuts, trimmed pauses, crop and captions as in the preview
+        {formatDuration(duration)} · {cropAspectLabel(clip.crop, meta.width, meta.height)} · cuts, trimmed pauses, crop and captions as in the preview
       </p>
 
       <div className="mt-5 space-y-4">
         <Field label="Resolution">
           <div role="radiogroup" aria-label="Resolution" className="grid grid-cols-2 gap-2">
             {RESOLUTION_IDS.map((id) => {
-              const { width, height } = RESOLUTIONS[id];
+              const { width, height } = sizes[id];
               const ok = !!encoders?.[id];
               const on = id === res;
               return (

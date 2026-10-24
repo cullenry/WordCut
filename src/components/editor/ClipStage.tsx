@@ -4,15 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { renderClipFrame } from "@/lib/captions/frame";
 import type { CaptionPage } from "@/lib/captions/group";
 import { captionPagesFor } from "@/lib/captions/words";
-import { CROP_ASPECT } from "@/lib/clips/crop";
+import { cropRatio, cropRect, panCrop, type Crop } from "@/lib/clips/crop";
 import type { Edl } from "@/lib/edl/edl";
 import { sourceToEdited } from "@/lib/edl/time";
+import { outputSize } from "@/lib/media/export/plan";
 import type { Word } from "@/lib/transcript/types";
 import { selectActiveClip, selectPlayEdl, useEditorStore } from "@/store/editor-store";
 import { captionFontFamily, ensureCaptionFonts } from "./captionFont";
 
-/** Export draws at this width; the preview never needs more pixels than it has on screen. */
-const MAX_BACKING_WIDTH = 1080;
+/** A press that moves less than this is a click (play or pause), not a drag of the crop. */
+const DRAG_SLOP = 4;
 
 let pageCache: {
   words: readonly Word[];
@@ -33,9 +34,10 @@ function pagesFor(words: readonly Word[], deleted: ReadonlySet<string>, edl: Edl
 }
 
 /**
- * The live 9:16 preview of the selected clip. Every frame goes through
- * renderClipFrame, the same function the exporter will call, so the crop and the
- * captions here are exactly what ends up in the file.
+ * The live preview of the selected clip, in the crop's shape. Every frame goes
+ * through renderClipFrame, the same function the exporter will call, so the crop and
+ * the captions here are exactly what ends up in the file. Dragging the picture moves
+ * the crop over the source; a click plays or pauses.
  */
 export function ClipStage() {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -45,20 +47,26 @@ export function ClipStage() {
   const empty = useEditorStore((s) => (selectPlayEdl(s)?.duration ?? 0) === 0);
   const togglePlay = useEditorStore((s) => s.togglePlay);
   const playing = useEditorStore((s) => s.playing);
+  const ratio = useEditorStore((s) => {
+    const clip = selectActiveClip(s);
+    return clip && s.source ? cropRatio(clip.crop, s.source.meta.width, s.source.meta.height) : 9 / 16;
+  });
+  const drag = useRef<{ x: number; y: number; crop: Crop; moved: boolean } | null>(null);
+  const [dragging, setDragging] = useState(false);
 
-  // The largest 9:16 box that fits the pane.
+  // The largest box of the crop's shape that fits the pane.
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const measure = () => {
-      const w = Math.min(el.clientWidth, el.clientHeight * CROP_ASPECT);
-      setBox({ w: Math.floor(w), h: Math.floor(w / CROP_ASPECT) });
+      const w = Math.min(el.clientWidth, el.clientHeight * ratio);
+      setBox({ w: Math.floor(w), h: Math.floor(w / ratio) });
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [ratio]);
 
   // Size the backing store to the screen (so text is sharp), then draw whenever anything changes.
   useEffect(() => {
@@ -66,8 +74,9 @@ export function ClipStage() {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx || box.w === 0) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.min(MAX_BACKING_WIDTH, Math.round(box.w * dpr));
-    canvas.height = Math.round(canvas.width / CROP_ASPECT);
+    // Never more pixels than the export draws, nor than the screen shows.
+    canvas.width = Math.min(outputSize(ratio, "1080").width, Math.round(box.w * dpr));
+    canvas.height = Math.max(1, Math.round(canvas.width / ratio));
 
     const family = captionFontFamily();
     let raf = 0;
@@ -84,7 +93,7 @@ export function ClipStage() {
           image: video,
           imageWidth: video.videoWidth,
           imageHeight: video.videoHeight,
-          cropOffset: clip.cropOffset,
+          crop: clip.crop,
           pages,
           time: sourceToEdited(edl, video.currentTime),
           settings: clip.captions,
@@ -113,7 +122,7 @@ export function ClipStage() {
       video?.removeEventListener("loadeddata", schedule);
       cancelAnimationFrame(raf);
     };
-  }, [box]);
+  }, [box, ratio]);
 
   // While playing, draw in step with the video rather than waiting on store updates.
   useEffect(() => {
@@ -132,9 +141,39 @@ export function ClipStage() {
       <div className="relative" style={{ width: box.w, height: box.h }}>
         <canvas
           ref={canvasRef}
-          onClick={togglePlay}
-          aria-label="9:16 preview of the selected clip"
-          className="block cursor-pointer rounded-md bg-black"
+          onPointerDown={(e) => {
+            const s = useEditorStore.getState();
+            const clip = selectActiveClip(s);
+            if (e.button !== 0 || !clip) return;
+            e.currentTarget.setPointerCapture(e.pointerId);
+            drag.current = { x: e.clientX, y: e.clientY, crop: clip.crop, moved: false };
+          }}
+          onPointerMove={(e) => {
+            const d = drag.current;
+            const s = useEditorStore.getState();
+            const clip = selectActiveClip(s);
+            if (!d || !clip || !s.source || box.w === 0) return;
+            const dx = e.clientX - d.x;
+            const dy = e.clientY - d.y;
+            if (!d.moved && Math.hypot(dx, dy) < DRAG_SLOP) return;
+            if (!d.moved) setDragging(true);
+            d.moved = true;
+            const { width, height } = s.source.meta;
+            // Source pixels per screen pixel; dragging the picture right moves the window left.
+            const k = cropRect(width, height, d.crop).w / box.w;
+            s.editClip(clip.id, { crop: panCrop(width, height, d.crop, -dx * k, -dy * k) });
+          }}
+          onPointerUp={() => {
+            if (drag.current && !drag.current.moved) togglePlay();
+            drag.current = null;
+            setDragging(false);
+          }}
+          onPointerCancel={() => {
+            drag.current = null;
+            setDragging(false);
+          }}
+          aria-label="Preview of the selected clip. Click to play or pause, drag to move the crop."
+          className={`block touch-none rounded-md bg-black ${dragging ? "cursor-grabbing" : "cursor-pointer"}`}
           style={{ width: box.w, height: box.h }}
         />
         {empty && (

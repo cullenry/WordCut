@@ -1,8 +1,9 @@
 import type { CaptionPage } from "@/lib/captions/group";
 import type { FontFaceSource } from "@/lib/captions/fonts";
 import type { CaptionSettings } from "@/lib/captions/types";
+import type { Crop } from "@/lib/clips/crop";
 import type { Edl } from "@/lib/edl/edl";
-import type { ResolutionId } from "./plan";
+import type { OutputSize, ResolutionId } from "./plan";
 
 /** Messages between the editor and the export worker. Everything here is structured-cloneable. */
 
@@ -50,7 +51,7 @@ export interface ExportJob {
   clipEdl: Edl;
   pages: CaptionPage[];
   captions: CaptionSettings;
-  cropOffset: number;
+  crop: Crop;
   width: number;
   height: number;
   frameRate: number;
@@ -70,7 +71,9 @@ export interface ExportResult {
   fontWarning: string | null;
 }
 
-export type WorkerRequest = { type: "probe"; file: File } | { type: "export"; job: ExportJob };
+export type WorkerRequest =
+  | { type: "probe"; file: File; sizes: Record<ResolutionId, OutputSize> }
+  | { type: "export"; job: ExportJob };
 
 export type WorkerResponse =
   | { type: "probe"; result: ProbeResult }

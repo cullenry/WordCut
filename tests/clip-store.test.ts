@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_CROP, type Crop } from "@/lib/clips/crop";
 import { emptyHistory, pushHistory, replaceLastEntry } from "@/lib/edl/history";
 import { loadProject, saveProject, type ProjectRecord } from "@/lib/persistence/projects";
 import type { Transcript } from "@/lib/transcript/types";
@@ -11,6 +12,8 @@ import {
   type Source,
 } from "@/store/editor-store";
 import { makeWords } from "./helpers";
+
+const at = (x: number): Crop => ({ ...DEFAULT_CROP, x });
 
 // 12 s source. Three sentences with pauses between them.
 const words = makeWords([
@@ -75,7 +78,7 @@ describe("making clips", () => {
     expect(clip.name).toBe("So here's the thing");
     expect(clip.start).toBeCloseTo(0.88, 6);
     expect(clip.end).toBeCloseTo(2.72, 6);
-    expect(clip.cropOffset).toBe(0);
+    expect(clip.crop).toEqual(DEFAULT_CROP);
     expect(state().selectedClipId).toBe("clip-1");
     expect(state().history.past).toHaveLength(1);
   });
@@ -255,17 +258,17 @@ describe("editing a clip", () => {
     state().makeClip();
     const now = vi.spyOn(performance, "now");
     now.mockReturnValue(1000);
-    state().editClip("clip-1", { cropOffset: 0.1 });
+    state().editClip("clip-1", { crop: at(0.1) });
     now.mockReturnValue(1100);
-    state().editClip("clip-1", { cropOffset: 0.4 });
+    state().editClip("clip-1", { crop: at(0.4) });
     now.mockReturnValue(1200);
-    state().editClip("clip-1", { cropOffset: 0.8 });
-    expect(state().clips[0].cropOffset).toBe(0.8);
+    state().editClip("clip-1", { crop: at(0.8) });
+    expect(state().clips[0].crop.x).toBe(0.8);
     expect(state().history.past).toHaveLength(2); // the clip + one crop step
     state().undo();
-    expect(state().clips[0].cropOffset).toBe(0);
+    expect(state().clips[0].crop.x).toBe(0);
     state().redo();
-    expect(state().clips[0].cropOffset).toBe(0.8);
+    expect(state().clips[0].crop.x).toBe(0.8);
   });
 
   it("starts a new undo step after a pause", () => {
@@ -273,12 +276,12 @@ describe("editing a clip", () => {
     state().makeClip();
     const now = vi.spyOn(performance, "now");
     now.mockReturnValue(1000);
-    state().editClip("clip-1", { cropOffset: 0.5 });
+    state().editClip("clip-1", { crop: at(0.5) });
     now.mockReturnValue(5000);
-    state().editClip("clip-1", { cropOffset: -0.5 });
+    state().editClip("clip-1", { crop: at(-0.5) });
     expect(state().history.past).toHaveLength(3);
     state().undo();
-    expect(state().clips[0].cropOffset).toBe(0.5);
+    expect(state().clips[0].crop.x).toBe(0.5);
   });
 
   it("keeps different settings as separate steps", () => {
@@ -299,15 +302,15 @@ describe("editing a clip", () => {
     state().makeClip();
     const now = vi.spyOn(performance, "now");
     now.mockReturnValue(1000);
-    state().editClip("clip-1", { cropOffset: 0.5 });
+    state().editClip("clip-1", { crop: at(0.5) });
     now.mockReturnValue(1100);
-    state().editClip("clip-1", { cropOffset: 0.9 });
+    state().editClip("clip-1", { crop: at(0.9) });
     state().undo();
     now.mockReturnValue(1200);
-    state().editClip("clip-1", { cropOffset: -0.3 });
+    state().editClip("clip-1", { crop: at(-0.3) });
     expect(state().history.past).toHaveLength(2);
     state().undo();
-    expect(state().clips[0].cropOffset).toBe(0);
+    expect(state().clips[0].crop.x).toBe(0);
   });
 
   it("keeps caption settings per clip", () => {
@@ -323,8 +326,8 @@ describe("editing a clip", () => {
   it("ignores edits to a clip that does not exist, and no-op edits", () => {
     select(0, 3);
     state().makeClip();
-    state().editClip("nope", { cropOffset: 1 });
-    state().editClip("clip-1", { cropOffset: 0 });
+    state().editClip("nope", { crop: at(1) });
+    state().editClip("clip-1", { crop: at(0) });
     expect(state().history.past).toHaveLength(1);
   });
 });
@@ -333,13 +336,13 @@ describe("saving clips", () => {
   it("saves clips with the project", async () => {
     select(0, 3);
     state().makeClip();
-    state().editClip("clip-1", { cropOffset: -0.6, captions: { style: "boxed" } });
+    state().editClip("clip-1", { crop: at(-0.6), captions: { style: "boxed" } });
     state().renameClip("clip-1", "Intro");
     flushPendingSave();
     await vi.waitFor(async () => {
       const saved = await loadProject(PROJECT);
       expect(saved?.clips).toHaveLength(1);
-      expect(saved?.clips?.[0]).toMatchObject({ name: "Intro", cropOffset: -0.6 });
+      expect(saved?.clips?.[0]).toMatchObject({ name: "Intro", crop: { x: -0.6 } });
       expect(saved?.clips?.[0].captions.style).toBe("boxed");
     });
   });
@@ -360,7 +363,7 @@ describe("saving clips", () => {
   it("restores clips when the same file is opened again", async () => {
     select(0, 3);
     state().makeClip();
-    state().editClip("clip-1", { cropOffset: 0.25 });
+    state().editClip("clip-1", { crop: at(0.25) });
     flushPendingSave();
     await vi.waitFor(async () => expect((await loadProject(PROJECT))?.clips).toHaveLength(1));
 
@@ -368,7 +371,7 @@ describe("saving clips", () => {
     expect(state().clips).toEqual([]);
     state().setSource(source);
     await vi.waitFor(() => expect(state().clips).toHaveLength(1));
-    expect(state().clips[0]).toMatchObject({ id: "clip-1", cropOffset: 0.25 });
+    expect(state().clips[0]).toMatchObject({ id: "clip-1", crop: { x: 0.25 } });
     expect(state().selectedClipId).toBeNull();
   });
 

@@ -9,6 +9,8 @@ import {
   frameCount,
   frameDuration,
   frameSourceTimes,
+  outputSize,
+  outputSizes,
   frameTime,
   outputFrameRate,
   snapFrameRate,
@@ -277,6 +279,36 @@ describe("audioSegments", () => {
 
   it("an empty clip has no audio", () => {
     expect(audioSegments(clipEdl(cut, 2.2, 2.8), 48_000)).toEqual({ segments: [], totalSamples: 0 });
+  });
+});
+
+describe("outputSize", () => {
+  it("fits each preset into the resolution's box", () => {
+    expect(outputSize(9 / 16, "1080")).toEqual({ width: 1080, height: 1920 });
+    expect(outputSize(16 / 9, "1080")).toEqual({ width: 1920, height: 1080 });
+    expect(outputSize(1, "1080")).toEqual({ width: 1080, height: 1080 });
+    expect(outputSize(4 / 5, "1080")).toEqual({ width: 1080, height: 1350 });
+    expect(outputSize(9 / 16, "720")).toEqual({ width: 720, height: 1280 });
+    expect(outputSizes(1)).toEqual({ "1080": { width: 1080, height: 1080 }, "720": { width: 720, height: 720 } });
+  });
+
+  it("keeps a free shape inside the box, in even pixels", () => {
+    for (const r of [0.2, 0.37, 1.33, 2.35, 5]) {
+      for (const id of ["1080", "720"] as const) {
+        const { width, height } = outputSize(r, id);
+        expect(width % 2).toBe(0);
+        expect(height % 2).toBe(0);
+        expect(Math.max(width, height)).toBeLessThanOrEqual(id === "1080" ? 1920 : 1280);
+        expect(Math.min(width, height)).toBeLessThanOrEqual(id === "1080" ? 1080 : 720);
+        expect(width / height).toBeCloseTo(r, 1);
+      }
+    }
+    expect(outputSize(2.35, "1080")).toEqual({ width: 1920, height: 818 });
+  });
+
+  it("falls back to 9:16 for a bad ratio", () => {
+    expect(outputSize(NaN, "1080")).toEqual({ width: 1080, height: 1920 });
+    expect(outputSize(0, "720")).toEqual({ width: 720, height: 1280 });
   });
 });
 

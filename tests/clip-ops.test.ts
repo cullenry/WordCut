@@ -13,9 +13,11 @@ import {
   sanitizeClips,
   type ClipOp,
 } from "@/lib/clips/ops";
+import { DEFAULT_CROP, cropFromOffset, type Crop } from "@/lib/clips/crop";
 import { newClip, type Clip } from "@/lib/clips/types";
 import { sayWords } from "./helpers";
 
+const at = (x: number): Crop => ({ ...DEFAULT_CROP, x });
 const clip = (id: string, start = 0, end = 5): Clip => newClip({ id, name: id, start, end });
 const ids = (clips: readonly Clip[]) => clips.map((c) => c.id);
 
@@ -49,9 +51,9 @@ describe("applyClipOp / invertClipOp", () => {
   });
 
   it("edits crop and captions and undoes", () => {
-    const op = editOp(base[0], { cropOffset: 0.4, captions: { style: "boxed", size: 1.3 } })!;
+    const op = editOp(base[0], { crop: at(0.4), captions: { style: "boxed", size: 1.3 } })!;
     const after = applyClipOp(base, op);
-    expect(after[0].cropOffset).toBe(0.4);
+    expect(after[0].crop.x).toBe(0.4);
     expect(after[0].captions).toMatchObject({ style: "boxed", size: 1.3 });
     expect(applyClipOp(after, invertClipOp(op))).toEqual(base);
   });
@@ -72,7 +74,7 @@ describe("applyClipOp / invertClipOp", () => {
 
 describe("editOp / patchClip", () => {
   it("records only what changed, with the old values", () => {
-    const op = editOp(clip("a"), { cropOffset: 0, captions: { style: "minimal", position: "bottom" } })!;
+    const op = editOp(clip("a"), { crop: at(0), captions: { style: "minimal", position: "bottom" } })!;
     expect(op).toEqual({
       kind: "clip-edit",
       id: "a",
@@ -82,31 +84,31 @@ describe("editOp / patchClip", () => {
   });
 
   it("is null when nothing changes", () => {
-    expect(editOp(clip("a"), { cropOffset: 0 })).toBeNull();
+    expect(editOp(clip("a"), { crop: at(0) })).toBeNull();
     expect(editOp(clip("a"), { captions: { size: 1 } })).toBeNull();
   });
 
-  it("clamps the crop offset and repairs bad caption values", () => {
-    const c = patchClip(clip("a"), { cropOffset: 3, captions: { color: "nope", size: 99 } });
-    expect(c.cropOffset).toBe(1);
+  it("repairs the crop and repairs bad caption values", () => {
+    const c = patchClip(clip("a"), { crop: at(3), captions: { color: "nope", size: 99 } });
+    expect(c.crop.x).toBe(1);
     expect(c.captions.color).toBe(DEFAULT_CAPTIONS.color);
     expect(c.captions.size).toBe(1.6);
   });
 
   it("an edit that is clamped back to the old value is not an edit", () => {
-    const c = { ...clip("a"), cropOffset: 1 };
-    expect(editOp(c, { cropOffset: 5 })).toBeNull();
+    const c = { ...clip("a"), crop: at(1) };
+    expect(editOp(c, { crop: at(5) })).toBeNull();
   });
 });
 
 describe("mergeClipEdits", () => {
   const a = clip("a");
-  const first = editOp(a, { cropOffset: 0.2 })!;
-  const second = editOp({ ...a, cropOffset: 0.2 }, { cropOffset: 0.6 })!;
+  const first = editOp(a, { crop: at(0.2) })!;
+  const second = editOp({ ...a, crop: at(0.2) }, { crop: at(0.6) })!;
 
   it("folds a drag into one step: first before, last after", () => {
     const merged = mergeClipEdits(first, second)!;
-    expect(merged).toEqual({ kind: "clip-edit", id: "a", before: { cropOffset: 0 }, after: { cropOffset: 0.6 } });
+    expect(merged).toEqual({ kind: "clip-edit", id: "a", before: { crop: at(0) }, after: { crop: at(0.6) } });
     const undone = applyClipOp(applyClipOp([a], merged), invertClipOp(merged));
     expect(undone).toEqual([a]);
   });
@@ -147,7 +149,7 @@ describe("ids and names", () => {
 describe("sanitizeClips", () => {
   it("keeps good clips and fills missing fields", () => {
     const out = sanitizeClips([{ id: "clip-1", name: "A", start: 1, end: 3 }], 10);
-    expect(out).toEqual([{ id: "clip-1", name: "A", start: 1, end: 3, cropOffset: 0, captions: DEFAULT_CAPTIONS }]);
+    expect(out).toEqual([{ id: "clip-1", name: "A", start: 1, end: 3, crop: DEFAULT_CROP, captions: DEFAULT_CAPTIONS }]);
   });
 
   it("drops clips with nonsense ranges and clamps to the source", () => {
@@ -174,9 +176,17 @@ describe("sanitizeClips", () => {
       10,
     );
     expect(new Set(ids(out)).size).toBe(2);
-    expect(out[0].cropOffset).toBe(1);
+    expect(out[0].crop).toEqual(cropFromOffset(1));
     expect(out[0].captions).toEqual({ ...DEFAULT_CAPTIONS, color: "#ABC" });
     expect(out[1].name).toBe("Clip 2");
+  });
+
+  it("reads a saved crop, repairing it, ahead of an old slider position", () => {
+    const out = sanitizeClips(
+      [{ id: "a", name: "a", start: 0, end: 1, cropOffset: -1, crop: { aspect: "1:1", zoom: 2, x: 0.5, y: 3 } }],
+      10,
+    );
+    expect(out[0].crop).toEqual({ ...DEFAULT_CROP, aspect: "1:1", zoom: 2, x: 0.5, y: 1 });
   });
 
   it("returns [] for anything that is not a list", () => {

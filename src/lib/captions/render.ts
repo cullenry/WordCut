@@ -3,7 +3,7 @@ import { blockTop, DESIGN_H, DESIGN_W, layoutPage, type LaidLine, type LaidWord 
 import { readableOn, type CaptionSettings, type CaptionStyleId } from "./types";
 
 /**
- * The one caption painter. The live 9:16 preview and the export worker both call
+ * The one caption painter. The live clip preview and the export worker both call
  * drawCaptions, so what you see is what you export. It only needs the Canvas 2D
  * API, which a main-thread canvas and an OffscreenCanvas in a worker both have.
  */
@@ -204,7 +204,12 @@ function roundRect(ctx: Ctx2D, x: number, y: number, w: number, h: number, r: nu
   ctx.closePath();
 }
 
-/** Draws captions onto a canvas of any size by mapping the design space onto it. */
+/**
+ * Draws captions onto a canvas of any size. The 9:16 design space is scaled evenly
+ * (never stretched) to fit the canvas and centred in it, so a 9:16 canvas gets it
+ * edge to edge and a square or landscape one gets the same type at the size its
+ * height allows, in the same place relative to the height.
+ */
 export function paintCaptions(
   ctx: Ctx2D,
   width: number,
@@ -214,8 +219,10 @@ export function paintCaptions(
   settings: CaptionSettings,
   fontFamily?: string,
 ): void {
+  const k = Math.min(width / DESIGN_W, height / DESIGN_H);
   ctx.save();
-  ctx.scale(width / DESIGN_W, height / DESIGN_H);
+  ctx.translate((width - DESIGN_W * k) / 2, (height - DESIGN_H * k) / 2);
+  ctx.scale(k, k);
   drawCaptions(ctx, pages, t, settings, fontFamily);
   ctx.restore();
 }

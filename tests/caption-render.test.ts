@@ -6,6 +6,7 @@ import { drawCaptions, paintCaptions, popScale, type Ctx2D } from "@/lib/caption
 import { drawCaptionSample } from "@/lib/captions/sample";
 import { captionPagesFor } from "@/lib/captions/words";
 import { DEFAULT_CAPTIONS, type CaptionSettings } from "@/lib/captions/types";
+import { DEFAULT_CROP } from "@/lib/clips/crop";
 import { clipEdl } from "@/lib/clips/range";
 import { buildEdl } from "@/lib/edl/edl";
 import { makeWords } from "./helpers";
@@ -245,6 +246,32 @@ describe("drawCaptions", () => {
   });
 });
 
+describe("paintCaptions on other shapes", () => {
+  const pages = pagesOf(["make", "it", "count"]);
+
+  it("never stretches: a landscape canvas gets the type its height allows, centred", () => {
+    const tall = ctxOf();
+    const wide = ctxOf();
+    paintCaptions(tall, 1080, 1920, pages, 0.5, settings({ style: "minimal" }));
+    paintCaptions(wide, 1920, 1080, pages, 0.5, settings({ style: "minimal" }));
+    const k = 1080 / 1920;
+    wide.texts.forEach((t, i) => {
+      expect(t.px).toBeCloseTo(tall.texts[i].px * k, 6);
+      expect(t.y).toBeCloseTo(tall.texts[i].y * k, 6);
+      // The 9:16 design frame sits in the middle of the wide canvas.
+      expect(t.x).toBeCloseTo((1920 - 1080 * k) / 2 + tall.texts[i].x * k, 6);
+    });
+  });
+
+  it("puts a square canvas's captions at the same height fraction", () => {
+    const tall = ctxOf();
+    const square = ctxOf();
+    paintCaptions(tall, 1080, 1920, pages, 0.5, settings({ position: "bottom" }));
+    paintCaptions(square, 1080, 1080, pages, 0.5, settings({ position: "bottom" }));
+    expect(square.texts[0].y / 1080).toBeCloseTo(tall.texts[0].y / 1920, 6);
+  });
+});
+
 describe("popScale", () => {
   it("starts large and settles to 1", () => {
     expect(popScale(0)).toBeCloseTo(1.12, 9);
@@ -295,7 +322,7 @@ describe("renderClipFrame", () => {
     image: {} as CanvasImageSource,
     imageWidth: 1920,
     imageHeight: 1080,
-    cropOffset: 0,
+    crop: DEFAULT_CROP,
     pages: pagesOf(["make", "it", "count"]),
     time: 0.5,
     settings: settings({ style: "minimal" }),
@@ -304,7 +331,7 @@ describe("renderClipFrame", () => {
 
   it("draws the cropped video over the whole canvas, then the captions", () => {
     const c = ctxOf();
-    renderClipFrame(c, 540, 960, frame({ cropOffset: -1 }));
+    renderClipFrame(c, 540, 960, frame({ crop: { ...DEFAULT_CROP, x: -1 } }));
     expect(c.images).toHaveLength(1);
     const [sx, sy, sw, sh, dx, dy, dw, dh] = c.images[0];
     expect([sx, sy, sh]).toEqual([0, 0, 1080]);
@@ -314,14 +341,20 @@ describe("renderClipFrame", () => {
   });
 
   it("moves the crop with the offset", () => {
-    const x = (cropOffset: number) => {
+    const x = (offset: number) => {
       const c = ctxOf();
-      renderClipFrame(c, 540, 960, frame({ cropOffset }));
+      renderClipFrame(c, 540, 960, frame({ crop: { ...DEFAULT_CROP, x: offset } }));
       return c.images[0][0];
     };
     expect(x(-1)).toBe(0);
     expect(x(0)).toBeCloseTo(656.25, 9);
     expect(x(1)).toBeCloseTo(1312.5, 9);
+  });
+
+  it("draws a zoomed, square crop", () => {
+    const c = ctxOf();
+    renderClipFrame(c, 500, 500, frame({ crop: { ...DEFAULT_CROP, aspect: "1:1", zoom: 2, x: 1, y: -1 } }));
+    expect(c.images[0]).toEqual([1920 - 540, 0, 540, 540, 0, 0, 500, 500]);
   });
 
   it("skips the captions when they are off, but still draws the video", () => {

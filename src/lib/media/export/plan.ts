@@ -12,10 +12,35 @@ const MIN_DIVIDED_RATE = 24;
 
 export type ResolutionId = "1080" | "720";
 
-export const RESOLUTIONS: Record<ResolutionId, { width: number; height: number }> = {
-  "1080": { width: 1080, height: 1920 },
-  "720": { width: 720, height: 1280 },
+export interface OutputSize {
+  width: number;
+  height: number;
+}
+
+/** The box each resolution fits its output into, long side by short side: 1080 → 1920 × 1080. */
+const RESOLUTION_BOXES: Record<ResolutionId, { long: number; short: number }> = {
+  "1080": { long: 1920, short: 1080 },
+  "720": { long: 1280, short: 720 },
 };
+
+const even = (v: number) => Math.max(2, 2 * Math.round(v / 2));
+
+/**
+ * The output size for a crop of `ratio` (width over height): as big as fits the
+ * resolution's box turned to match it, in even pixels (what encoders accept).
+ * 9:16 at 1080 is 1080 × 1920, 16:9 is 1920 × 1080, 1:1 is 1080 × 1080.
+ */
+export function outputSize(ratio: number, id: ResolutionId): OutputSize {
+  const { long, short } = RESOLUTION_BOXES[id];
+  const r = Number.isFinite(ratio) && ratio > 0 ? ratio : 9 / 16;
+  const [boxW, boxH] = r >= 1 ? [long, short] : [short, long];
+  const width = Math.min(boxW, boxH * r);
+  return { width: even(width), height: even(width / r) };
+}
+
+export function outputSizes(ratio: number): Record<ResolutionId, OutputSize> {
+  return { "1080": outputSize(ratio, "1080"), "720": outputSize(ratio, "720") };
+}
 
 /** Largest first. Spelled out because "1080" and "720" are integer-like keys, which Object.keys sorts ascending. */
 export const RESOLUTION_IDS: readonly ResolutionId[] = ["1080", "720"];

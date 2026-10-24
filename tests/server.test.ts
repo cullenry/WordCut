@@ -68,6 +68,11 @@ describe("getTranscriptionProvider", () => {
     expect(() => getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "assemblyai" })).toThrow(/ASSEMBLYAI_API_KEY/);
   });
 
+  it("says where to set a missing key: .env.local locally, project settings on Vercel", () => {
+    expect(() => getTranscriptionProvider({})).toThrow(/\.env\.local/);
+    expect(() => getTranscriptionProvider({ VERCEL: "1" })).toThrow(/Vercel project.*redeploy/);
+  });
+
   it("treats an empty provider as the default", () => {
     expect(getTranscriptionProvider({ TRANSCRIPTION_PROVIDER: "", DEEPGRAM_API_KEY: "k" }).name).toBe("deepgram");
   });

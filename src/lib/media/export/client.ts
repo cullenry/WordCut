@@ -1,4 +1,5 @@
 import type { ExportCounts } from "./progress";
+import type { OutputSize, ResolutionId } from "./plan";
 import type { ExportJob, ExportResult, ProbeResult, WorkerResponse } from "./protocol";
 
 /**
@@ -26,8 +27,8 @@ export class ExportWorker {
   }
 
   /** Checks this browser can decode the file and encode an MP4, and measures the source frame rate. */
-  probe(file: File): Promise<ProbeResult> {
-    return this.request("probe", () => this.worker.postMessage({ type: "probe", file }));
+  probe(file: File, sizes: Record<ResolutionId, OutputSize>): Promise<ProbeResult> {
+    return this.request("probe", () => this.worker.postMessage({ type: "probe", file, sizes }));
   }
 
   /** Runs the export. Rejects with an AbortError if terminate() is called first. */
@@ -74,16 +75,19 @@ export class ExportWorker {
 
 export const isAbort = (e: unknown): boolean => e instanceof DOMException && e.name === "AbortError";
 
-const probes = new WeakMap<File, Promise<ProbeResult>>();
+const probes = new WeakMap<File, Map<string, Promise<ProbeResult>>>();
 
-/** Probes a file once per session, on a short-lived worker of its own. */
-export function probeExport(file: File): Promise<ProbeResult> {
-  let p = probes.get(file);
+/** Probes a file once per session for each set of output sizes, on a short-lived worker of its own. */
+export function probeExport(file: File, sizes: Record<ResolutionId, OutputSize>): Promise<ProbeResult> {
+  let bySize = probes.get(file);
+  if (!bySize) probes.set(file, (bySize = new Map()));
+  const key = JSON.stringify(sizes);
+  let p = bySize.get(key);
   if (!p) {
     const worker = new ExportWorker();
-    p = worker.probe(file).finally(() => worker.terminate());
-    p.catch(() => probes.delete(file));
-    probes.set(file, p);
+    p = worker.probe(file, sizes).finally(() => worker.terminate());
+    p.catch(() => bySize.delete(key));
+    bySize.set(key, p);
   }
   return p;
 }

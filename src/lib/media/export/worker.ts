@@ -25,7 +25,6 @@ import { missingWebCodecsApis } from "@/lib/media/support";
 import { SegmentWriter, fadeSamples, packPlanar } from "./audio";
 import {
   RESOLUTION_IDS,
-  RESOLUTIONS,
   audioBitrate,
   audioSegments,
   codecName,
@@ -35,6 +34,7 @@ import {
   frameTime,
   outputFrameRate,
   videoBitrate,
+  type OutputSize,
   type ResolutionId,
 } from "./plan";
 import type {
@@ -69,7 +69,7 @@ const post = (msg: WorkerResponse, transfer: Transferable[] = []) => scope.postM
 scope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   const req = e.data;
   try {
-    if (req.type === "probe") post({ type: "probe", result: await probe(req.file) });
+    if (req.type === "probe") post({ type: "probe", result: await probe(req.file, req.sizes) });
     else {
       const result = await exportWithFallback(req.job);
       post({ type: "done", result }, [result.buffer]);
@@ -87,7 +87,7 @@ function openInput(file: File): Input {
   return new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
 }
 
-async function probe(file: File): Promise<ProbeResult> {
+async function probe(file: File, sizes: Record<ResolutionId, OutputSize>): Promise<ProbeResult> {
   const missing = missingWebCodecsApis();
   if (missing.length) {
     return {
@@ -123,13 +123,13 @@ async function probe(file: File): Promise<ProbeResult> {
 
     const encoders = {} as Record<ResolutionId, VideoEncoderChoice | null>;
     for (const id of RESOLUTION_IDS) {
-      const { width, height } = RESOLUTIONS[id];
+      const { width, height } = sizes[id];
       encoders[id] = await pickVideoEncoder(width, height, frameRate);
     }
     if (!encoders["1080"] && !encoders["720"]) {
       return {
         ok: false,
-        reason: "This browser can't encode H.264, HEVC, VP9 or AV1 video at 9:16 sizes, so it can't make an MP4.",
+        reason: "This browser can't encode H.264, HEVC, VP9 or AV1 video at this clip's size, so it can't make an MP4.",
       };
     }
 
@@ -292,7 +292,7 @@ async function encodeVideo(
   // Decode at no more than the size the crop is drawn at: a 4K source is scaled down once, in the decoder's canvas.
   const dw = track.displayWidth;
   const dh = track.displayHeight;
-  const crop = cropRect(dw, dh, job.cropOffset);
+  const crop = cropRect(dw, dh, job.crop);
   const scale = crop.w > 0 ? Math.min(1, job.width / crop.w) : 1;
   const sinkW = Math.max(2, Math.round(dw * scale));
   const sinkH = Math.max(2, Math.round(dh * scale));
@@ -306,7 +306,7 @@ async function encodeVideo(
       image: wrapped?.canvas ?? ctx.canvas,
       imageWidth: wrapped ? wrapped.canvas.width : 0,
       imageHeight: wrapped ? wrapped.canvas.height : 0,
-      cropOffset: job.cropOffset,
+      crop: job.crop,
       pages: job.pages,
       time: frameTime(n, fps),
       settings: job.captions,

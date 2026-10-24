@@ -15,12 +15,12 @@ import {
   type CaptionSettings,
   type CaptionStyleId,
 } from "@/lib/captions/types";
-import { clampOffset, cropAxis, cropFraction, offsetForCentre, windowStart } from "@/lib/clips/crop";
 import type { Clip } from "@/lib/clips/types";
 import { percentOf } from "@/lib/media/export/progress";
 import { selectPlayEdl, useEditorStore } from "@/store/editor-store";
 import { useExportStore } from "@/store/export-store";
 import { captionFontFamily, ensureCaptionFonts } from "../captionFont";
+import { CropEditor } from "./CropEditor";
 
 const STYLE_LABELS: Record<CaptionStyleId, { name: string; hint: string }> = {
   bold: { name: "Bold", hint: "Big, outlined, pops on each word" },
@@ -30,7 +30,6 @@ const STYLE_LABELS: Record<CaptionStyleId, { name: string; hint: string }> = {
 
 /** Crop and caption controls for the selected clip. Every change is live in the preview and one undo step per gesture. */
 export function ClipInspector({ clip }: { clip: Clip }) {
-  const meta = useEditorStore((s) => s.source!.meta);
   const editClip = useEditorStore((s) => s.editClip);
   const setCaptions = (captions: Partial<CaptionSettings>) => editClip(clip.id, { captions });
   const c = clip.captions;
@@ -39,14 +38,9 @@ export function ClipInspector({ clip }: { clip: Clip }) {
     <div className="space-y-6 px-4 py-4">
       <ExportRow clipId={clip.id} />
 
-      <section aria-label="Reframe">
-        <h3 className="text-sm font-medium">Reframe to 9:16</h3>
-        <CropControl
-          offset={clip.cropOffset}
-          srcW={meta.width}
-          srcH={meta.height}
-          onChange={(cropOffset) => editClip(clip.id, { cropOffset })}
-        />
+      <section aria-label="Crop">
+        <h3 className="text-sm font-medium">Crop</h3>
+        <CropEditor clip={clip} />
       </section>
 
       <section aria-label="Captions">
@@ -113,7 +107,7 @@ function ExportRow({ clipId }: { clipId: string }) {
     <button
       onClick={() => openDialog(clipId)}
       disabled={duration <= 0}
-      title={duration <= 0 ? "Everything in this clip is cut" : "Export a 9:16 MP4 of this clip"}
+      title={duration <= 0 ? "Everything in this clip is cut" : "Export an MP4 of this clip"}
       className={`${primaryButton} w-full`}
     >
       <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -293,105 +287,5 @@ function StyleCard({
         {STYLE_LABELS[style].name}
       </span>
     </button>
-  );
-}
-
-/**
- * The crop position as a strip standing for the full-width frame, with a window
- * showing the 9:16 part that is kept. Drag the window, click the strip to centre it
- * there, use the arrow keys, or double-click to centre.
- */
-function CropControl({
-  offset,
-  srcW,
-  srcH,
-  onChange,
-}: {
-  offset: number;
-  srcW: number;
-  srcH: number;
-  onChange: (offset: number) => void;
-}) {
-  const stripRef = useRef<HTMLDivElement>(null);
-  const grab = useRef(0);
-  const fraction = cropFraction(srcW, srcH);
-  const axis = cropAxis(srcW, srcH);
-  const [from, to] = axis === "x" ? ["Left", "Right"] : ["Top", "Bottom"];
-  const fixed = fraction >= 1;
-  const left = windowStart(offset, fraction);
-
-  const position = (clientX: number) => {
-    const r = stripRef.current!.getBoundingClientRect();
-    return (clientX - r.left) / r.width;
-  };
-
-  const label = Math.abs(offset) < 0.005 ? "Centred" : `${Math.round(Math.abs(offset) * 100)}% ${offset < 0 ? from.toLowerCase() : to.toLowerCase()}`;
-
-  return (
-    <div className="mt-3">
-      <div
-        ref={stripRef}
-        role="slider"
-        tabIndex={fixed ? -1 : 0}
-        aria-label={`Crop position, ${from.toLowerCase()} to ${to.toLowerCase()}`}
-        aria-valuemin={-100}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(offset * 100)}
-        aria-valuetext={label}
-        aria-disabled={fixed}
-        onPointerDown={(e) => {
-          if (fixed || e.button !== 0) return;
-          e.currentTarget.setPointerCapture(e.pointerId);
-          const p = position(e.clientX);
-          const centre = left + fraction / 2;
-          // Grabbing the window keeps it under the pointer; clicking elsewhere centres it there.
-          grab.current = p >= left && p <= left + fraction ? p - centre : 0;
-          onChange(offsetForCentre(p - grab.current, fraction));
-        }}
-        onPointerMove={(e) => {
-          if (e.buttons === 1 && !fixed) onChange(offsetForCentre(position(e.clientX) - grab.current, fraction));
-        }}
-        onDoubleClick={() => !fixed && onChange(0)}
-        onKeyDown={(e) => {
-          const step = e.shiftKey ? 0.25 : 0.05;
-          const next =
-            e.code === "ArrowLeft" || e.code === "ArrowUp"
-              ? offset - step
-              : e.code === "ArrowRight" || e.code === "ArrowDown"
-                ? offset + step
-                : e.code === "Home"
-                  ? -1
-                  : e.code === "End"
-                    ? 1
-                    : null;
-          if (next === null || fixed) return;
-          e.preventDefault();
-          onChange(clampOffset(next));
-        }}
-        className={`relative h-11 touch-none select-none overflow-hidden rounded-field border border-rule outline-none focus-visible:ring-1 focus-visible:ring-ink/50 ${
-          fixed ? "opacity-50" : "cursor-ew-resize"
-        }`}
-      >
-        <div
-          className="absolute inset-y-0 rounded-[5px] border-2 border-ink bg-ink/10"
-          style={{
-            left: `${left * 100}%`,
-            width: `${Math.min(1, fraction) * 100}%`,
-          }}
-        />
-      </div>
-      <div className="mt-1.5 flex items-center justify-between text-xs text-ink-2">
-        <span>{from}</span>
-        <button
-          onClick={() => onChange(0)}
-          disabled={fixed || offset === 0}
-          className="press font-label text-[11px] text-ink/80 hover:text-ink disabled:cursor-default disabled:hover:text-ink/80"
-          title={offset === 0 ? undefined : "Centre the crop"}
-        >
-          {fixed ? "Already 9:16" : label}
-        </button>
-        <span>{to}</span>
-      </div>
-    </div>
   );
 }

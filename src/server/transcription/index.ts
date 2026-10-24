@@ -21,7 +21,13 @@ export function getTranscriptionProvider(env: Env = process.env): TranscriptionP
   }
   const { keyEnv, create } = PROVIDERS[name as keyof typeof PROVIDERS];
   const key = env[keyEnv]?.trim();
-  if (!key) throw new ProviderConfigError(`${keyEnv} is not set. Add it to .env.local and restart the server.`);
+  if (!key) {
+    // Vercel sets VERCEL=1 on its builds and functions, where .env.local is never read.
+    const where = env.VERCEL
+      ? "Add it under Settings → Environment Variables in your Vercel project, then redeploy."
+      : "Add it to .env.local and restart the server.";
+    throw new ProviderConfigError(`${keyEnv} is not set. ${where}`);
+  }
   return create(key);
 }
 

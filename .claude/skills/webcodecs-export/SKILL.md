@@ -5,7 +5,8 @@ description: How WordCut exports a clip to MP4 with WebCodecs and Mediabunny in 
 
 # MP4 export (step 7)
 
-A clip is exported as a 9:16 MP4 with its cuts, trimmed pauses, crop and captions,
+A clip is exported as an MP4 in its crop's shape (9:16, 1:1, 4:5, 16:9, the source's,
+or free) with its cuts, trimmed pauses, crop and captions,
 entirely in the browser. The page never touches the video bytes; a worker reads the
 source lazily, draws every frame with the preview's own renderer, encodes with WebCodecs
 and muxes in memory.
@@ -131,6 +132,12 @@ region differed by 27/255 on average, against 0.4/255 with the real hand-off.
   audio track (and so the container) runs up to 21 ms past the video: +10.3 ms on a 6.923 s
   clip. It is silence, not drift, since the audio content ends on time. Report it honestly
   rather than claiming exact duration.
+- **Output size follows the crop.** `outputSize(ratio, id)` fits the crop's ratio into the
+  resolution's box (1080: 1920 long × 1080 short; 720: 1280 × 720) in even pixels, so the
+  probe must check encoders at those sizes: it takes `sizes` and `probeExport` caches per
+  file and size set. A free 1.42:1 crop exported at 1538 × 1080 with hardware H.264.
+- **Captions scale evenly.** `paintCaptions` fits the 1080 × 1920 design space into the
+  canvas with one scale and centres it; stretching it to a landscape canvas squashed the type.
 - **`Object.keys` sorts integer-like keys.** `{ "1080": …, "720": … }` comes back as `720`
   first. Use an explicit order array (`RESOLUTION_IDS`).
 - **`/// <reference lib="webworker" />`** in one file pulls the webworker lib into the whole

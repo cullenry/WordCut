@@ -52,7 +52,7 @@ export const TranscriptRow = memo(function TranscriptRow({
   // The space after word i, highlighted when the selection continues past it.
   const space = (i: number) =>
     i < last && (
-      <span key={`${words[i].id}-sp`} className={isSelected(i) && i < selEnd ? "bg-accent/30" : undefined}>
+      <span key={`${words[i].id}-sp`} className={isSelected(i) && i < selEnd ? "bg-ink/15" : undefined}>
         {" "}
       </span>
     );
@@ -66,7 +66,7 @@ export const TranscriptRow = memo(function TranscriptRow({
       const run = [];
       for (let k = i; k <= end; k++) {
         run.push(
-          <span key={words[k].id} data-i={k} className={`rounded-[3px] ${isSelected(k) ? "bg-accent/30" : ""}`}>
+          <span key={words[k].id} data-i={k} className={`rounded-chip ${isSelected(k) ? "bg-ink/15" : ""}`}>
             {words[k].text}
           </span>,
           k < end && space(k),
@@ -84,16 +84,16 @@ export const TranscriptRow = memo(function TranscriptRow({
     allCut = false;
     const cls =
       i === active
-        ? "bg-accent text-white"
+        ? "bg-ink text-paper"
         : isSelected(i)
-          ? "bg-accent/30"
+          ? "bg-ink/15"
           : review?.has(words[i].id)
             ? review.get(words[i].id)
-              ? "bg-amber-400/25 text-amber-100"
-              : "underline decoration-amber-400/60 decoration-dotted underline-offset-4"
-            : "[@media(hover:hover)]:hover:bg-white/10";
+              ? "bg-mark/30"
+              : "underline decoration-mark decoration-dotted underline-offset-4"
+            : "[@media(hover:hover)]:hover:bg-ink/[0.07]";
     spans.push(
-      <span key={words[i].id} data-i={i} className={`cursor-pointer rounded-[3px] ${cls}`}>
+      <span key={words[i].id} data-i={i} className={`cursor-pointer rounded-chip ${cls}`}>
         {words[i].text}
       </span>,
       space(i),
@@ -110,7 +110,7 @@ export const TranscriptRow = memo(function TranscriptRow({
     >
       <button
         onClick={() => onSeek(p.start)}
-        className={`self-start pt-0.5 text-left text-xs tabular-nums text-muted hover:text-fg ${allCut ? "opacity-40" : ""}`}
+        className={`self-start pt-1 text-left font-label text-[11px] text-ink-2 hover:text-ink ${allCut ? "opacity-40" : ""}`}
         tabIndex={-1}
       >
         {formatTime(time)}
@@ -118,7 +118,7 @@ export const TranscriptRow = memo(function TranscriptRow({
       <div>
         {mark && (
           <div
-            className={`mb-1 select-none text-xs font-medium ${mark.kind === "speaker" ? "text-accent-2" : "text-muted"}`}
+            className={`mb-1 select-none font-label text-[11px] ${mark.kind === "speaker" ? "text-ink" : "text-ink-2"}`}
             title={
               mark.kind === "change"
                 ? "Speaker labels aren't matched across the parts of a long video, so only the change is shown."

@@ -312,7 +312,7 @@ export function TranscriptView({ transcript }: { transcript: Transcript }) {
             clickedRef.current = -1;
             setFollow(true);
           }}
-          className="enter press absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-border bg-panel-2 px-3.5 py-1.5 text-xs shadow-lg hover:brightness-125"
+          className="enter press absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-rule bg-paper-2 px-3.5 py-1.5 text-xs shadow-lg shadow-black/20 hover:border-ink/40"
         >
           Follow playback
         </button>

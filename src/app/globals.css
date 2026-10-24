@@ -1,5 +1,60 @@
 @import "tailwindcss";
 
+/*
+ * Shared design tokens: the landing page and the editor both draw from these.
+ * Paper is the background and ink the text, so in dark mode (data-ink="dark" on
+ * <html>) paper is charcoal and ink is cream. Red only ever means "cut"; yellow
+ * is a highlighter (the captions' yellow, and the cleanup review in the editor).
+ */
+:root {
+  --paper: #f2eee5;
+  --paper-2: #e8e3d7;
+  --ink: #141210;
+  --ink-2: #5f5a50;
+  --rule: rgb(20 18 16 / 0.16);
+  --cut: #dc3520;
+  /* The cut red for small text; the light theme's --cut is under 4.5:1 on paper. */
+  --cut-text: #b82a17;
+  --mark: #ffd60a;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+:root[data-ink="dark"] {
+  --paper: #141210;
+  --paper-2: #1e1b18;
+  --ink: #eee8dc;
+  --ink-2: #a39d91;
+  --rule: rgb(238 232 220 / 0.16);
+  --cut: #ff5b43;
+  --cut-text: #ff5b43;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-rule: var(--rule);
+  --color-cut: var(--cut);
+  --color-cut-text: var(--cut-text);
+  --color-mark: var(--mark);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-accent: var(--font-accent-serif), ui-serif, Georgia, serif;
+  --font-label: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+/* Radii: chips hug a word, fields are controls and cards, panels are dialogs and drop targets. Buttons are pills (rounded-full). */
+@theme {
+  --radius-chip: 3px;
+  --radius-field: 0.5rem;
+  --radius-panel: 1rem;
+}
+
+/*
+ * The editor's previous purple palette. Only the landing page's EditorDemo mock
+ * still uses these; remove them once that demo is restyled to the tokens above.
+ */
 @theme {
   --color-bg: #0b0b0f;
   --color-panel: #13131a;
@@ -9,39 +64,23 @@
   --color-muted: #8b8b9a;
   --color-accent: #7c5cff;
   --color-accent-2: #a78bfa;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-}
-
-/* Landing-page tokens. They point at variables, so the page's dark mode can swap them. */
-@theme inline {
-  --color-paper: var(--lp-paper);
-  --color-paper-2: var(--lp-paper-2);
-  --color-ink: var(--lp-ink);
-  --color-ink-2: var(--lp-ink-2);
-  --color-rule: var(--lp-rule);
-  --color-cut: var(--lp-cut);
-  --color-mark: var(--lp-mark);
-  --font-display: var(--font-display-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-accent: var(--font-accent-serif), ui-serif, Georgia, serif;
-  --font-label: var(--font-plex-mono), ui-monospace, monospace;
 }
 
 html,
 body {
   height: 100%;
-  background: var(--color-bg);
-  color: var(--color-fg);
+  background: var(--paper);
+  color: var(--ink);
+  color-scheme: light;
+}
+html[data-ink="dark"],
+html[data-ink="dark"] body {
   color-scheme: dark;
 }
 
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-}
-
-:root {
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 /* Pressable feedback. */
@@ -82,19 +121,18 @@ body {
 /*
  * Cut words: dimmed and struck through, in place. Deliberately no transition:
  * cutting and restoring happen dozens of times a session and must feel instant.
- * Hovering a run brightens it and tints the strike, hinting that a click restores it.
+ * The strike is always red; hovering a run brightens it, hinting that a click restores it.
  */
 .cut {
   cursor: pointer;
-  color: color-mix(in oklab, var(--color-fg) 32%, transparent);
+  color: color-mix(in oklab, var(--ink) 38%, transparent);
   text-decoration-line: line-through;
   text-decoration-thickness: 1.5px;
-  text-decoration-color: color-mix(in oklab, var(--color-fg) 40%, transparent);
+  text-decoration-color: var(--cut);
 }
 @media (hover: hover) and (pointer: fine) {
   .cut:hover {
-    color: color-mix(in oklab, var(--color-fg) 62%, transparent);
-    text-decoration-color: var(--color-accent-2);
+    color: color-mix(in oklab, var(--ink) 66%, transparent);
   }
 }
 
@@ -144,43 +182,12 @@ dialog.dialog[open]::backdrop {
   }
 }
 
-/*
- * Landing page: paper and ink, with a red that only ever means "cut" and the
- * captions' yellow as a highlighter. These variables are unused by the editor,
- * which keeps its own dark theme. data-ink="dark" on <html> is the page's dark mode.
- */
-:root {
-  --lp-paper: #f2eee5;
-  --lp-paper-2: #e8e3d7;
-  --lp-ink: #141210;
-  --lp-ink-2: #5f5a50;
-  --lp-rule: rgb(20 18 16 / 0.16);
-  --lp-cut: #dc3520;
-  --lp-mark: #ffd60a;
-}
-:root[data-ink="dark"] {
-  --lp-paper: #141210;
-  --lp-paper-2: #1e1b18;
-  --lp-ink: #eee8dc;
-  --lp-ink-2: #a39d91;
-  --lp-rule: rgb(238 232 220 / 0.16);
-  --lp-cut: #ff5b43;
-}
-html:has(.landing),
-html:has(.landing) body {
-  background: var(--lp-paper);
-  color: var(--lp-ink);
-  color-scheme: light;
-}
-html[data-ink="dark"]:has(.landing),
-html[data-ink="dark"]:has(.landing) body {
-  color-scheme: dark;
-}
+/* Landing page: the shared tokens above, with yellow as the text-selection highlighter. */
 html:has(.landing) ::-webkit-scrollbar-thumb {
-  background: color-mix(in oklab, var(--lp-ink) 25%, transparent);
+  background: color-mix(in oklab, var(--ink) 25%, transparent);
 }
 .landing ::selection {
-  background: var(--lp-mark);
+  background: var(--mark);
   color: #141210;
 }
 
@@ -207,13 +214,13 @@ html:has(.landing) ::-webkit-scrollbar-thumb {
   right: -0.04em;
   top: 54%;
   height: max(2px, 0.075em);
-  background: var(--lp-cut);
+  background: var(--cut);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 180ms var(--ease-out), opacity 120ms ease;
 }
 .cw[data-cut="true"] {
-  color: color-mix(in oklab, var(--lp-ink) 38%, transparent);
+  color: color-mix(in oklab, var(--ink) 38%, transparent);
 }
 .cw[data-cut="true"] .cw-w::before {
   transform: scaleX(1);
@@ -234,7 +241,7 @@ html:has(.landing) ::-webkit-scrollbar-thumb {
   bottom: 0.16em;
   width: max(2px, 0.08em);
   border-radius: 1px;
-  background: var(--lp-cut);
+  background: var(--cut);
   opacity: 0;
   transform: scaleY(0.4);
   transition: opacity 140ms var(--ease-out), transform 180ms var(--ease-out);
@@ -264,19 +271,19 @@ button.cw::after {
   left: calc(50% - max(1px, 0.04em));
 }
 button.cw:focus-visible {
-  outline: 2px solid var(--lp-ink);
+  outline: 2px solid var(--ink);
   outline-offset: 1px;
 }
 @media (hover: hover) and (pointer: fine) {
   button.cw:not([data-cut="true"]):hover .cw-w {
-    background: color-mix(in oklab, var(--lp-mark) 60%, transparent);
+    background: color-mix(in oklab, var(--mark) 60%, transparent);
   }
   button.cw[data-closed="true"]:hover::after {
     transform: scaleX(1.8);
   }
 }
 
-/* The headline's "um.": struck once, as the page loads. */
+/* The headline's "um": struck once, as the page loads. */
 .h-strike {
   position: relative;
 }
@@ -287,7 +294,7 @@ button.cw:focus-visible {
   right: -0.02em;
   top: 55%;
   height: 0.07em;
-  background: var(--lp-cut);
+  background: var(--cut);
   transform-origin: left;
   animation: strike-in 420ms var(--ease-out) 450ms both;
 }
@@ -308,7 +315,7 @@ button.cw:focus-visible {
   right: -0.02em;
   top: 54%;
   height: 0.075em;
-  background: var(--lp-cut);
+  background: var(--cut);
   transform-origin: left;
 }
 @supports (animation-timeline: view()) {
@@ -326,14 +333,14 @@ button.cw:focus-visible {
   position: absolute;
   left: 0;
   border-radius: 1px;
-  background: color-mix(in oklab, var(--lp-ink) 30%, transparent);
+  background: color-mix(in oklab, var(--ink) 30%, transparent);
   transition:
     transform 300ms var(--ease-in-out) 200ms,
     opacity 160ms ease 200ms,
     background-color 120ms ease;
 }
 .pd-seg[data-cut="true"] {
-  background: var(--lp-cut);
+  background: var(--cut);
   opacity: 0;
 }
 .pd-track {
@@ -352,21 +359,6 @@ button.cw:focus-visible {
 }
 .pd-fade[data-shown="false"] {
   opacity: 0;
-}
-
-/* Scroll ruler ticks: minor every 12px, major every 60px. */
-.ruler-ticks {
-  background: repeating-linear-gradient(to bottom, currentColor 0 1px, transparent 1px 12px);
-}
-.ruler-ticks-major {
-  background: repeating-linear-gradient(to bottom, currentColor 0 1px, transparent 1px 60px);
-}
-.ruler-notch {
-  transition: opacity 160ms var(--ease-out), transform 200ms var(--ease-out);
-  @starting-style {
-    opacity: 0;
-    transform: translateY(-50%) scaleX(0.3);
-  }
 }
 
 /*
@@ -528,8 +520,7 @@ button.cw:focus-visible {
   .cw::after,
   .pd-seg,
   .pd-track,
-  .pd-notch,
-  .ruler-notch {
+  .pd-notch {
     transition: none;
   }
   .h-strike::after {
@@ -563,6 +554,6 @@ button.cw:focus-visible {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2a36;
+  background: color-mix(in oklab, var(--ink) 20%, transparent);
   border-radius: 8px;
 }

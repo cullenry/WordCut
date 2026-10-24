@@ -18,15 +18,19 @@ export interface CaptionSettings {
 export const SIZE_MIN = 0.6;
 export const SIZE_MAX = 1.6;
 
+/** The brand red (--cut in the dark theme, src/app/globals.css). Canvas and the export worker can't read CSS. */
+const BRAND_RED = "#FF5B43";
+
 export const DEFAULT_CAPTIONS: CaptionSettings = {
   enabled: true,
   style: "bold",
   position: "bottom",
   size: 1,
-  color: "#FFD60A",
+  color: BRAND_RED,
 };
 
 export const CAPTION_COLORS: readonly { name: string; value: string }[] = [
+  { name: "Red", value: BRAND_RED },
   { name: "Yellow", value: "#FFD60A" },
   { name: "Lime", value: "#A3E635" },
   { name: "Cyan", value: "#22D3EE" },

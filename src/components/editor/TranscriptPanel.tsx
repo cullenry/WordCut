@@ -1,5 +1,6 @@
 "use client";
 
+import { outlineButton, primaryButton, secondaryButton } from "@/components/ui/buttons";
 import type { TranscriptionStatus } from "@/store/editor-store";
 import { useEditorStore } from "@/store/editor-store";
 import { CleanupPanel } from "./transcript/CleanupPanel";
@@ -17,8 +18,8 @@ export function TranscriptMeta() {
   if (!transcript || status.state === "running") return null;
 
   return (
-    <div className="flex items-center gap-3 text-xs text-muted">
-      <span>
+    <div className="flex items-center gap-3 text-xs text-ink-2">
+      <span className="font-label text-[11px]">
         {transcript.words.length.toLocaleString()} words
         {restored && " · restored"}
       </span>
@@ -29,7 +30,7 @@ export function TranscriptMeta() {
             ? `Your cuts are cleared when the video is transcribed again${hasClips ? "; clips are kept" : ""}`
             : undefined
         }
-        className="press rounded-md border border-border px-2 py-1 hover:bg-panel-2"
+        className={outlineButton}
       >
         Re-transcribe
       </button>
@@ -50,7 +51,7 @@ export function TranscriptPanel() {
         <ErrorState message={status.message} onRetry={() => void start()} />
       ) : transcript ? (
         transcript.words.length === 0 ? (
-          <p className="p-8 text-center text-sm text-muted">No speech was detected in this video.</p>
+          <p className="p-8 text-center text-sm text-ink-2">No speech was detected in this video.</p>
         ) : (
           <>
             <EditToolbar transcript={transcript} />
@@ -70,12 +71,12 @@ function EmptyState({ onStart }: { onStart: () => void }) {
     <div className="enter grid flex-1 place-items-center p-8 text-center">
       <div className="max-w-xs">
         <p className="font-medium">Transcribe this video</p>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-2 text-sm text-ink-2">
           The audio is extracted in your browser and sent for transcription. Your video never leaves this device.
         </p>
         <button
           onClick={onStart}
-          className="press mt-5 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:brightness-110"
+          className={`${primaryButton} mt-5`}
         >
           Transcribe
         </button>
@@ -100,13 +101,13 @@ function Progress({ status }: { status: Extract<TranscriptionStatus, { state: "r
     <div className="enter grid flex-1 place-items-center p-8">
       <div className="w-full max-w-xs text-center">
         <p className="text-sm font-medium tabular-nums">{label}</p>
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-panel-2">
+        <div className="mt-4 h-1 overflow-hidden rounded-full bg-ink/10">
           <div
-            className="progress-fill h-full origin-left rounded-full bg-accent"
+            className="progress-fill h-full origin-left rounded-full bg-ink"
             style={{ transform: `scaleX(${Math.max(0.02, fraction)})` }}
           />
         </div>
-        <button onClick={cancel} className="press mt-5 text-xs text-muted hover:text-fg">
+        <button onClick={cancel} className="press mt-5 text-xs text-ink-2 hover:text-ink">
           Cancel
         </button>
       </div>
@@ -118,11 +119,11 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   return (
     <div className="enter grid flex-1 place-items-center p-8 text-center">
       <div className="max-w-sm">
-        <p className="font-medium text-red-400">Transcription failed</p>
-        <p className="mt-2 text-sm text-muted">{message}</p>
+        <p className="font-medium text-cut-text">Transcription failed</p>
+        <p className="mt-2 text-sm text-ink-2">{message}</p>
         <button
           onClick={onRetry}
-          className="press mt-5 rounded-lg border border-border bg-panel-2 px-4 py-2 text-sm hover:brightness-125"
+          className={`${secondaryButton} mt-5`}
         >
           Try again
         </button>

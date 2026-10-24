@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, type ReactNode } from "react";
+import { ghostButton, primaryButtonSmall } from "@/components/ui/buttons";
 import { applyOp, applyTrims } from "@/lib/edl/edits";
 import { buildEdl } from "@/lib/edl/edl";
 import { sourceToEdited } from "@/lib/edl/time";
@@ -56,13 +57,13 @@ function Panel({ review }: { review: CleanupReview }) {
   ].filter(Boolean);
 
   return (
-    <section aria-label="Clean up" className="sheet flex max-h-[58%] min-h-0 flex-col border-t border-border bg-panel-2">
+    <section aria-label="Clean up" className="sheet flex max-h-[58%] min-h-0 flex-col border-t border-rule">
       <div className="flex items-center justify-between px-4 pb-1 pt-3">
         <h2 className="text-sm font-medium">Clean up</h2>
         <button
           onClick={closeCleanup}
           aria-label="Cancel clean up"
-          className="press grid h-6 w-6 place-items-center rounded-md text-muted hover:bg-white/10 hover:text-fg"
+          className="press grid h-6 w-6 place-items-center rounded-full text-ink-2 hover:bg-ink/[0.07] hover:text-ink"
         >
           <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
             <path d="m4 4 8 8M12 4l-8 8" />
@@ -77,12 +78,12 @@ function Panel({ review }: { review: CleanupReview }) {
           onToggleAll={(on) => setCleanupGroup("fillers", on)}
           empty={settings.phrases ? "No fillers found." : "No um, uh or er found."}
           controls={
-            <label className="flex cursor-pointer items-center gap-2 py-1 text-xs text-muted">
+            <label className="flex cursor-pointer items-center gap-2 py-1 text-xs text-ink-2">
               <input
                 type="checkbox"
                 checked={settings.phrases}
                 onChange={(e) => setCleanupSettings({ phrases: e.target.checked })}
-                className="accent-accent"
+                className="accent-ink"
               />
               Also suggest &ldquo;like&rdquo;, &ldquo;you know&rdquo;, &ldquo;I mean&rdquo;&hellip;
             </label>
@@ -125,27 +126,27 @@ function Panel({ review }: { review: CleanupReview }) {
         </Group>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-border px-4 py-2.5">
-        <p className="min-w-0 flex-1 text-xs tabular-nums text-muted">
+      <div className="flex items-center gap-3 border-t border-rule px-4 py-2.5">
+        <p className="min-w-0 flex-1 text-xs tabular-nums text-ink-2">
           {nothingTicked ? (
             "Nothing selected"
           ) : (
             <>
-              <span className="text-fg">{summary.join(" · ")}</span>
+              <span className="text-ink">{summary.join(" · ")}</span>
               {saved > 0.05 && <> · saves {formatDuration(saved)}</>}
             </>
           )}
         </p>
         <button
           onClick={closeCleanup}
-          className="press rounded-md px-3 py-1.5 text-xs text-muted hover:bg-white/10 hover:text-fg"
+          className={ghostButton}
         >
           Cancel
         </button>
         <button
           onClick={applyCleanup}
           disabled={nothingTicked}
-          className="press rounded-md bg-accent px-3.5 py-1.5 text-xs font-medium text-white hover:brightness-110 disabled:cursor-default disabled:opacity-40 disabled:hover:brightness-100"
+          className={primaryButtonSmall}
         >
           Apply
         </button>
@@ -188,7 +189,7 @@ function Group({
 }) {
   const ticked = items.filter((i) => i.included).length;
   return (
-    <div className="border-t border-border/60 py-2 first:border-t-0">
+    <div className="border-t border-rule py-2 first:border-t-0">
       <div className="flex items-center gap-2.5">
         <input
           type="checkbox"
@@ -199,16 +200,16 @@ function Group({
             if (el) el.indeterminate = ticked > 0 && ticked < items.length;
           }}
           onChange={(e) => onToggleAll(e.target.checked)}
-          className="accent-accent"
+          className="accent-ink"
         />
         <h3 className="text-xs font-medium">{title}</h3>
-        <span className="text-xs tabular-nums text-muted">
+        <span className="font-label text-[11px] text-ink-2">
           {items.length > 0 && (ticked === items.length ? items.length : `${ticked} of ${items.length}`)}
         </span>
       </div>
       <div className="pl-[1.625rem]">
         {controls}
-        {items.length === 0 ? <p className="py-1.5 text-xs text-muted">{empty}</p> : <ul className="mt-0.5">{children}</ul>}
+        {items.length === 0 ? <p className="py-1.5 text-xs text-ink-2">{empty}</p> : <ul className="mt-0.5">{children}</ul>}
       </div>
     </div>
   );
@@ -231,20 +232,20 @@ function ItemRow({
 }) {
   return (
     // Rows past the fold skip layout and paint, so a few hundred stay instant.
-    <li className="item flex items-center gap-2.5 rounded-md hover:bg-white/5">
+    <li className="item flex items-center gap-2.5 rounded-field hover:bg-ink/[0.04]">
       <input
         type="checkbox"
         aria-label={label}
         checked={included}
         onChange={onToggle}
-        className="accent-accent"
+        className="accent-ink"
       />
       <button
         onClick={onSeek}
         className={`flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left text-xs ${included ? "" : "opacity-50"}`}
       >
         <span className="min-w-0 truncate">{children}</span>
-        <span className="shrink-0 tabular-nums text-muted">{formatTime(time)}</span>
+        <span className="shrink-0 font-label text-[11px] text-ink-2">{formatTime(time)}</span>
       </button>
     </li>
   );
@@ -269,7 +270,7 @@ function FillerItem({
       onSeek={() => onSeek(Math.max(0, item.start - LEAD_IN))}
       time={time}
     >
-      <span className="rounded bg-amber-400/20 px-1 text-amber-100">{item.text}</span>
+      <span className="rounded-chip bg-mark/30 px-1">{item.text}</span>
     </ItemRow>
   );
 }
@@ -294,7 +295,7 @@ function SilenceItem({
       time={time}
     >
       <span className="tabular-nums">
-        {formatDuration(item.pause)} <span className="text-muted">&rarr;</span> {formatDuration(item.keep)}
+        {formatDuration(item.pause)} <span className="text-ink-2">&rarr;</span> {formatDuration(item.keep)}
       </span>
     </ItemRow>
   );
@@ -316,7 +317,7 @@ function Slider({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="flex items-center gap-3 text-xs text-muted">
+    <label className="flex items-center gap-3 text-xs text-ink-2">
       <span className="w-[4.75rem] shrink-0">{label}</span>
       <input
         type="range"
@@ -325,9 +326,9 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-4 min-w-0 flex-1 accent-accent"
+        className="h-4 min-w-0 flex-1 accent-ink"
       />
-      <span className="w-9 shrink-0 text-right tabular-nums text-fg">{formatDuration(value)}</span>
+      <span className="w-10 shrink-0 text-right font-label text-[11px] text-ink">{formatDuration(value)}</span>
     </label>
   );
 }

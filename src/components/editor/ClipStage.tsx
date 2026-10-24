@@ -138,7 +138,7 @@ export function ClipStage() {
           style={{ width: box.w, height: box.h }}
         />
         {empty && (
-          <div className="pointer-events-none absolute inset-0 grid place-items-center p-6 text-center text-sm text-muted">
+          <div className="pointer-events-none absolute inset-0 grid place-items-center p-6 text-center text-sm text-white/70">
             Everything in this clip is cut. Undo, or restore words in the transcript.
           </div>
         )}

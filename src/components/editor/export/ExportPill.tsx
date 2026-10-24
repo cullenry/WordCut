@@ -19,15 +19,15 @@ export function ExportPill() {
   return (
     <div
       role="status"
-      className="pill fixed bottom-4 right-4 z-40 w-72 rounded-xl border border-border bg-panel-2 px-3.5 py-3 shadow-xl shadow-black/50"
+      className="pill fixed bottom-4 right-4 z-40 w-72 rounded-panel border border-rule bg-paper-2 px-3.5 py-3 text-ink shadow-xl shadow-black/30"
     >
       <div className="flex items-center gap-2">
         <button onClick={() => openDialog(status.clipId)} className="min-w-0 flex-1 text-left">
           <p className="truncate text-sm">
             {status.state === "running" ? "Exporting" : status.state === "done" ? "Exported" : "Export failed"}
-            <span className="text-muted"> · {status.fileName}</span>
+            <span className="text-ink-2"> · {status.fileName}</span>
           </p>
-          <p className="text-xs tabular-nums text-muted">
+          <p className="text-xs tabular-nums text-ink-2">
             {status.state === "running"
               ? `${percentOf(status.fraction)}% · ${formatRemaining(status.remaining)}`
               : status.state === "done"

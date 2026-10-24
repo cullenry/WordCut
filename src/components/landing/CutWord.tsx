@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
-import { usePageCuts } from "./pageCuts";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 
 /** The strike draws first; then the word closes up to a notch. */
 const CLOSE_DELAY = 200;
@@ -57,27 +56,15 @@ export function CutWord({
   text,
   cut,
   space = true,
-  pageCut,
   onToggle,
 }: {
   text: string;
   cut: boolean;
   space?: boolean;
-  /** Registers the cut with the scroll ruler. */
-  pageCut?: { id: string; seconds: number };
   onToggle?: () => void;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const setCut = usePageCuts((s) => s.setCut);
   useCollapse(ref, cut);
-
-  const id = pageCut?.id;
-  const seconds = pageCut?.seconds ?? 0;
-  useEffect(() => {
-    if (!id) return;
-    setCut(id, cut && ref.current ? { el: ref.current, seconds } : null);
-    return () => setCut(id, null);
-  }, [id, seconds, cut, setCut]);
 
   const inner = (
     <>

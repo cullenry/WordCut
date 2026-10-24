@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { display, label } from "@/components/ui/fonts";
 import { APP_NAME, APP_TAGLINE } from "@/lib/config";
 import "./globals.css";
 
@@ -13,8 +14,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // The landing page sets data-ink on <html> before hydrating, for its dark mode.
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    // Each page sets data-ink on <html> before hydrating, for its dark mode (see ThemeToggle).
+    <html lang="en" className={`${inter.variable} ${display.variable} ${label.variable}`} suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

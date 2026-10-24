@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { outlineButton } from "@/components/ui/buttons";
 import { Logo } from "@/components/ui/Logo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { sourceToEdited } from "@/lib/edl/time";
 import { formatBytes, formatTime } from "@/lib/format";
 import { flushPendingSave, selectPlayEdl, useEditorStore } from "@/store/editor-store";
@@ -85,23 +87,23 @@ export function Editor() {
 
   return (
     <div className="flex h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-border bg-panel px-4 py-2.5">
+      <header className="flex items-center justify-between gap-4 border-b border-rule px-4 py-2">
         <Logo />
-        {source && (
-          <div className="flex items-center gap-4 text-xs text-muted">
-            <span className="max-w-xs truncate text-fg">{source.file.name}</span>
-            <span>
-              {source.meta.width}x{source.meta.height} · {formatTime(source.meta.duration)} ·{" "}
-              {formatBytes(source.file.size)}
-            </span>
-            <button
-              onClick={clearSource}
-              className="rounded-md border border-border px-2.5 py-1 hover:bg-panel-2"
-            >
-              Close video
-            </button>
-          </div>
-        )}
+        <div className="flex min-w-0 items-center gap-4 text-xs text-ink-2">
+          {source && (
+            <>
+              <span className="min-w-0 max-w-xs truncate text-ink">{source.file.name}</span>
+              <span className="font-label text-[11px]">
+                {source.meta.width}x{source.meta.height} · {formatTime(source.meta.duration)} ·{" "}
+                {formatBytes(source.file.size)}
+              </span>
+              <button onClick={clearSource} className={`${outlineButton} shrink-0`}>
+                Close video
+              </button>
+            </>
+          )}
+          <ThemeToggle fallback="dark" size="h-7 w-7" />
+        </div>
       </header>
       <BrowserSupportBanner />
 
@@ -110,14 +112,14 @@ export function Editor() {
       ) : (
         <>
           <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
-            <section className="min-h-0 border-b border-border md:border-b-0 md:border-r">
+            <section className="min-h-0 border-b border-rule md:border-b-0 md:border-r">
               <VideoPreview />
             </section>
-            <section className="min-h-0 bg-panel">
+            <section className="min-h-0">
               <SidePanel />
             </section>
           </div>
-          <footer className="border-t border-border bg-panel">
+          <footer className="border-t border-rule">
             <Timeline />
           </footer>
           <ExportDialog />

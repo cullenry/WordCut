@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { primaryButton } from "@/components/ui/buttons";
 import { drawCaptionSample } from "@/lib/captions/sample";
 import {
   CAPTION_COLORS,
   CAPTION_POSITIONS,
   CAPTION_STYLES,
+  DEFAULT_CAPTIONS,
   SIZE_MAX,
   SIZE_MIN,
   parseHex,
@@ -85,7 +87,7 @@ export function ClipInspector({ clip }: { clip: Clip }) {
                 value={c.size}
                 onChange={(e) => setCaptions({ size: Number(e.target.value) })}
                 aria-label="Caption size"
-                className="h-1 w-full accent-accent"
+                className="h-1 w-full accent-ink"
               />
             </Field>
 
@@ -112,7 +114,7 @@ function ExportRow({ clipId }: { clipId: string }) {
       onClick={() => openDialog(clipId)}
       disabled={duration <= 0}
       title={duration <= 0 ? "Everything in this clip is cut" : "Export a 9:16 MP4 of this clip"}
-      className="press flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100"
+      className={`${primaryButton} w-full`}
     >
       <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10" />
@@ -125,9 +127,9 @@ function ExportRow({ clipId }: { clipId: string }) {
 function Field({ label, value, children }: { label: string; value?: string; children: ReactNode }) {
   return (
     <div>
-      <div className="mb-1.5 flex items-center justify-between text-xs text-muted">
+      <div className="mb-1.5 flex items-center justify-between text-xs text-ink-2">
         <span>{label}</span>
-        {value && <span className="tabular-nums text-fg/80">{value}</span>}
+        {value && <span className="font-label text-[11px] text-ink">{value}</span>}
       </div>
       {children}
     </div>
@@ -141,10 +143,10 @@ function Switch({ checked, label, onChange }: { checked: boolean; label: string;
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`press relative h-5 w-9 rounded-full transition-colors duration-150 ${checked ? "bg-accent" : "bg-border"}`}
+      className={`press relative h-5 w-9 rounded-full transition-colors duration-150 ${checked ? "bg-ink" : "bg-ink/20"}`}
     >
       <span
-        className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform duration-150"
+        className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full transition-transform duration-150 ${checked ? "bg-paper" : "bg-ink"}`}
         style={{ transform: checked ? "translateX(16px)" : "none", transitionTimingFunction: "var(--ease-out)" }}
       />
     </button>
@@ -163,15 +165,15 @@ function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid grid-flow-col auto-cols-fr gap-0.5 rounded-lg bg-bg p-0.5">
+    <div role="radiogroup" aria-label={label} className="grid grid-flow-col auto-cols-fr gap-0.5 rounded-full border border-rule p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
           role="radio"
           aria-checked={o.value === value}
           onClick={() => onChange(o.value)}
-          className={`press flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs ${
-            o.value === value ? "bg-panel-2 text-fg shadow-sm" : "text-muted hover:text-fg"
+          className={`press flex items-center justify-center gap-1.5 rounded-full py-1.5 text-xs ${
+            o.value === value ? "bg-ink/10 text-ink" : "text-ink-2 hover:text-ink"
           }`}
         >
           {o.icon}
@@ -195,7 +197,7 @@ function PositionIcon({ at }: { at: CaptionPosition }) {
 
 const toHex6 = (color: string): string => {
   const rgb = parseHex(color);
-  return rgb ? `#${rgb.map((v) => v.toString(16).padStart(2, "0")).join("")}` : "#ffd60a";
+  return rgb ? `#${rgb.map((v) => v.toString(16).padStart(2, "0")).join("")}` : DEFAULT_CAPTIONS.color;
 };
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
@@ -212,8 +214,8 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
             aria-label={c.name}
             title={c.name}
             onClick={() => onChange(c.value)}
-            className="press h-6 w-6 rounded-full ring-offset-2 ring-offset-panel"
-            style={{ background: c.value, boxShadow: on ? `0 0 0 2px var(--color-panel), 0 0 0 4px ${c.value}` : undefined }}
+            className="press h-6 w-6 rounded-full"
+            style={{ background: c.value, boxShadow: on ? `0 0 0 2px var(--paper), 0 0 0 4px ${c.value}` : undefined }}
           />
         );
       })}
@@ -222,7 +224,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
         className="press relative grid h-6 w-6 cursor-pointer place-items-center overflow-hidden rounded-full"
         style={{
           background: preset ? "conic-gradient(#ff5c93, #ffd60a, #a3e635, #22d3ee, #a78bfa, #ff5c93)" : value,
-          boxShadow: preset ? undefined : `0 0 0 2px var(--color-panel), 0 0 0 4px ${value}`,
+          boxShadow: preset ? undefined : `0 0 0 2px var(--paper), 0 0 0 4px ${value}`,
         }}
       >
         <input
@@ -282,12 +284,12 @@ function StyleCard({
       aria-checked={selected}
       onClick={onSelect}
       title={STYLE_LABELS[style].hint}
-      className={`press group relative block w-full overflow-hidden rounded-lg text-left ${
-        selected ? "ring-2 ring-accent" : "ring-1 ring-border hover:ring-muted"
+      className={`press group relative block w-full overflow-hidden rounded-field text-left ${
+        selected ? "ring-2 ring-ink" : "ring-1 ring-rule hover:ring-ink/40"
       }`}
     >
       <canvas ref={ref} className="block h-16 w-full" style={{ height: 64 }} />
-      <span className="absolute left-2 top-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[11px] text-fg/90">
+      <span className="absolute left-2 top-1.5 rounded-chip bg-black/50 px-1.5 py-0.5 text-[11px] text-white/90">
         {STYLE_LABELS[style].name}
       </span>
     </button>
@@ -366,25 +368,24 @@ function CropControl({
           e.preventDefault();
           onChange(clampOffset(next));
         }}
-        className={`relative h-11 touch-none select-none overflow-hidden rounded-lg border border-border bg-bg outline-none focus-visible:ring-1 focus-visible:ring-accent-2 ${
+        className={`relative h-11 touch-none select-none overflow-hidden rounded-field border border-rule outline-none focus-visible:ring-1 focus-visible:ring-ink/50 ${
           fixed ? "opacity-50" : "cursor-ew-resize"
         }`}
       >
         <div
-          className="absolute inset-y-0 rounded-sm border-2 border-accent bg-accent/15"
+          className="absolute inset-y-0 rounded-[5px] border-2 border-ink bg-ink/10"
           style={{
             left: `${left * 100}%`,
             width: `${Math.min(1, fraction) * 100}%`,
-            boxShadow: "0 0 0 999px rgba(11, 11, 15, 0.6)",
           }}
         />
       </div>
-      <div className="mt-1.5 flex items-center justify-between text-xs text-muted">
+      <div className="mt-1.5 flex items-center justify-between text-xs text-ink-2">
         <span>{from}</span>
         <button
           onClick={() => onChange(0)}
           disabled={fixed || offset === 0}
-          className="press tabular-nums text-fg/80 hover:text-fg disabled:cursor-default disabled:hover:text-fg/80"
+          className="press font-label text-[11px] text-ink/80 hover:text-ink disabled:cursor-default disabled:hover:text-ink/80"
           title={offset === 0 ? undefined : "Centre the crop"}
         >
           {fixed ? "Already 9:16" : label}

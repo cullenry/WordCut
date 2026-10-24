@@ -39,16 +39,16 @@ export function DropZone() {
           void handleFile(e.dataTransfer.files[0]);
         }}
         onClick={() => inputRef.current?.click()}
-        className={`flex w-full max-w-2xl cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed px-8 py-20 text-center transition ${
-          dragging ? "border-accent bg-accent/10" : "border-border bg-panel hover:border-accent/60"
+        className={`flex w-full max-w-2xl cursor-pointer flex-col items-center rounded-panel border border-dashed px-8 py-20 text-center transition ${
+          dragging ? "border-ink bg-ink/[0.05]" : "border-ink/25 hover:border-ink/50"
         }`}
       >
-        <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-panel-2 text-2xl">⬆</div>
-        <h2 className="text-xl font-semibold">{loading ? "Opening video..." : "Drop a video here"}</h2>
-        <p className="mt-2 text-sm text-muted">
+        <div className="mb-5 grid h-12 w-12 place-items-center rounded-full border border-rule text-xl">⬆</div>
+        <h2 className="font-display text-2xl font-extrabold tracking-[-0.02em]">{loading ? "Opening video..." : "Drop a video here"}</h2>
+        <p className="mt-2 text-sm text-ink-2">
           or click to browse. MP4, MOV, WebM. Your video stays on your device.
         </p>
-        {error && <p className="mt-5 max-w-md text-sm text-red-400">{error}</p>}
+        {error && <p className="mt-5 max-w-md text-sm text-cut-text">{error}</p>}
         <input
           ref={inputRef}
           type="file"

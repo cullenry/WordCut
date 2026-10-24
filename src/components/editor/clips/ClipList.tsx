@@ -115,15 +115,15 @@ export function ClipList() {
               if (e.button === 0 && !(e.target as HTMLElement).closest("[data-no-select]")) selectClip(clip.id);
             }}
             onKeyDown={(e) => onKeyDown(e, clip, i)}
-            className={`group relative flex shrink-0 items-center gap-1 rounded-lg pr-1.5 outline-none focus-visible:ring-1 focus-visible:ring-accent-2 ${
-              selected ? "bg-panel-2" : "hover:bg-panel-2/60"
-            } ${dragging ? "z-10 shadow-lg shadow-black/50" : drag ? "clip-row-slide" : ""}`}
+            className={`group relative flex shrink-0 items-center gap-1 rounded-field pr-1.5 outline-none focus-visible:ring-1 focus-visible:ring-ink/50 ${
+              dragging ? "z-10 bg-paper-2 shadow-lg shadow-black/30" : selected ? "bg-ink/[0.07]" : "hover:bg-ink/[0.04]"
+            } ${!dragging && drag ? "clip-row-slide" : ""}`}
             style={{
               height: ROW_H,
               transform: `translateY(${dragging ? drag.dy : shiftOf(i)}px)`,
             }}
           >
-            {selected && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent" />}
+            {selected && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-ink" />}
             <span
               data-no-select
               onPointerDown={(e) => startDrag(e, i)}
@@ -131,8 +131,8 @@ export function ClipList() {
               onPointerUp={endDrag}
               onPointerCancel={() => setDrag(null)}
               title="Drag to reorder (Alt+Up or Down)"
-              className={`grid h-full w-6 shrink-0 touch-none place-items-center rounded-l-lg text-muted ${
-                dragging ? "cursor-grabbing" : "cursor-grab hover:text-fg"
+              className={`grid h-full w-6 shrink-0 touch-none place-items-center rounded-l-field text-ink-2 ${
+                dragging ? "cursor-grabbing" : "cursor-grab hover:text-ink"
               }`}
             >
               <svg viewBox="0 0 12 16" className="h-4 w-3" fill="currentColor" aria-hidden>
@@ -163,12 +163,12 @@ export function ClipList() {
                   {clip.name}
                 </div>
               )}
-              <div className="mt-0.5 flex items-center gap-1.5 text-xs tabular-nums text-muted">
+              <div className="mt-0.5 flex items-center gap-1.5 font-label text-[11px] text-ink-2">
                 {meta.duration === 0 ? (
-                  <span className="text-amber-300">Everything is cut</span>
+                  <span className="text-cut-text">Everything is cut</span>
                 ) : (
                   <>
-                    <span className="text-fg/80">{formatDuration(meta.duration)}</span>
+                    <span className="text-ink">{formatDuration(meta.duration)}</span>
                     <span aria-hidden>·</span>
                     <span>at {formatTime(meta.at)}</span>
                     {meta.cut >= 0.05 && (
@@ -189,7 +189,7 @@ export function ClipList() {
               <RowButton label="Rename clip" onClick={() => setRenaming(clip.id)}>
                 <path d="m10.5 3.5 2 2M3 13l.5-2.5 7-7 2 2-7 7L3 13Z" />
               </RowButton>
-              <RowButton label="Delete clip" onClick={() => deleteClip(clip.id)}>
+              <RowButton label="Delete clip" danger onClick={() => deleteClip(clip.id)}>
                 <path d="M3.5 4.5h9M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8" />
               </RowButton>
             </div>
@@ -200,14 +200,25 @@ export function ClipList() {
   );
 }
 
-function RowButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+function RowButton({
+  label,
+  danger,
+  onClick,
+  children,
+}: {
+  label: string;
+  /** Deletes: turns red on hover. */
+  danger?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       onClick={onClick}
       aria-label={label}
       title={label}
       tabIndex={-1}
-      className="press grid h-7 w-7 place-items-center rounded-md text-muted hover:bg-white/10 hover:text-fg"
+      className={`press grid h-7 w-7 place-items-center rounded-full text-ink-2 hover:bg-ink/[0.07] ${danger ? "hover:text-cut-text" : "hover:text-ink"}`}
     >
       <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round">
         {children}
@@ -242,7 +253,7 @@ function RenameInput({ clip, onDone }: { clip: Clip; onDone: () => void }) {
         if (!cancelled.current) useEditorStore.getState().renameClip(clip.id, e.currentTarget.value);
         onDone();
       }}
-      className="w-full rounded border border-accent bg-bg px-1.5 py-0.5 text-sm font-medium outline-none"
+      className="w-full rounded-chip border border-ink/60 bg-paper px-1.5 py-0.5 text-sm font-medium outline-none"
     />
   );
 }

@@ -48,10 +48,10 @@ export function PlayableDemo({ media }: { media: DemoMediaOption }) {
     });
 
   return (
-    <div className="border border-ink">
+    <div className="rounded-3xl bg-paper-2">
       <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <div className="border-b border-rule p-3 sm:p-5 lg:border-b-0 lg:border-r">
-          <div className="relative aspect-video overflow-hidden rounded-[3px] bg-[#0f0e17]">
+        <div className="p-3 sm:p-5">
+          <div className="relative aspect-video overflow-hidden rounded-2xl bg-[#0f0e17]">
             {media.kind === "video" ? (
               <video src={media.src} className="h-full w-full object-cover" autoPlay muted loop playsInline aria-label={media.alt} />
             ) : media.kind === "image" ? (
@@ -70,8 +70,7 @@ export function PlayableDemo({ media }: { media: DemoMediaOption }) {
           </p>
         </div>
 
-        <div className="grid grid-cols-[2.5rem_1fr] gap-x-4 p-5 sm:grid-cols-[3rem_1fr] sm:p-8 lg:p-10">
-          <span className="pt-2 font-label text-xs tabular-nums text-ink-2">0:00</span>
+        <div className="px-5 pb-5 sm:px-8 sm:pb-8 lg:p-10 lg:pl-5">
           <p
             aria-label="Transcript. Each word is a button: press it to cut the word, press it again to restore it."
             className="text-[1.35rem] font-medium leading-[1.6] tracking-[-0.01em] sm:text-[1.6rem]"
@@ -82,7 +81,6 @@ export function PlayableDemo({ media }: { media: DemoMediaOption }) {
                 text={w.text}
                 space={i < WORDS.length - 1}
                 cut={deleted.has(w.id)}
-                pageCut={{ id: w.id, seconds: w.end - w.start }}
                 onToggle={() => toggle(i)}
               />
             ))}
@@ -90,7 +88,7 @@ export function PlayableDemo({ media }: { media: DemoMediaOption }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-5 border-t border-ink p-4 sm:p-5 lg:flex-row lg:items-center lg:gap-8">
+      <div className="flex flex-col gap-5 px-5 pb-5 sm:px-8 sm:pb-7 lg:flex-row lg:items-center lg:gap-8">
         <div className="flex items-baseline gap-3 lg:w-48" aria-live="polite">
           <span className="font-label text-4xl tabular-nums tracking-[-0.02em]">{timecode(edl.duration)}</span>
           <span data-shown={removed > 0} className="pd-fade font-label text-sm tabular-nums text-cut">
@@ -100,12 +98,12 @@ export function PlayableDemo({ media }: { media: DemoMediaOption }) {
 
         {/* The lane is the original take; the track inside it shrinks to the edited length. */}
         <div className="relative h-11 w-full min-w-0 lg:w-auto lg:flex-1" aria-hidden>
-          <div data-shown={removed > 0} className="pd-fade absolute inset-0 rounded-[3px] border border-dashed border-ink/30" />
+          <div data-shown={removed > 0} className="pd-fade absolute inset-0 rounded-lg bg-ink/[0.05]" />
           <div
-            className="pd-track absolute inset-y-0 left-0 rounded-[3px] border border-ink/40 bg-paper-2"
+            className="pd-track absolute inset-y-0 left-0 rounded-lg bg-ink/[0.09]"
             style={{ width: `${(edl.duration / DEMO_DURATION) * 100}%` }}
           />
-          <div className="absolute inset-0 overflow-hidden rounded-[3px]">
+          <div className="absolute inset-0 overflow-hidden rounded-lg">
             {WORDS.map((w) => {
               const span = w.end - w.start;
               const gone = deleted.has(w.id);
@@ -141,7 +139,7 @@ export function PlayableDemo({ media }: { media: DemoMediaOption }) {
             type="button"
             disabled={fillers.length === 0}
             onClick={() => setDeleted((d) => new Set([...d, ...fillerIds]))}
-            className="press flex-1 rounded-full border border-ink px-4 py-2 text-sm font-medium transition-colors hover:bg-ink hover:text-paper disabled:pointer-events-none disabled:opacity-35 lg:flex-none"
+            className="press flex-1 rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-cut disabled:pointer-events-none disabled:opacity-35 lg:flex-none"
           >
             Cut the fillers
           </button>
@@ -149,7 +147,7 @@ export function PlayableDemo({ media }: { media: DemoMediaOption }) {
             type="button"
             disabled={deleted.size === 0}
             onClick={() => setDeleted(NONE)}
-            className="press flex-1 rounded-full border border-ink/25 px-4 py-2 text-sm font-medium transition-colors hover:border-ink disabled:pointer-events-none disabled:opacity-35 lg:flex-none"
+            className="press flex-1 rounded-full bg-ink/[0.07] px-4 py-2 text-sm font-medium transition-colors hover:bg-ink/[0.12] disabled:pointer-events-none disabled:opacity-35 lg:flex-none"
           >
             Reset
           </button>

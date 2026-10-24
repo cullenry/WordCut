@@ -1,7 +1,11 @@
-"use client";
-
 import { Editor } from "@/components/editor/Editor";
+import { themeScript } from "@/components/ui/theme";
 
 export default function EditorPage() {
-  return <Editor />;
+  return (
+    <>
+      <script dangerouslySetInnerHTML={{ __html: themeScript("dark") }} />
+      <Editor />
+    </>
+  );
 }

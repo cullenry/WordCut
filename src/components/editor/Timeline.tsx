@@ -70,7 +70,7 @@ export function Timeline() {
   if (duration === 0 && edl.sourceDuration > 0) {
     return (
       <div className="px-4 py-3">
-        <div className="grid h-[4.75rem] place-items-center rounded-lg border border-dashed border-border text-xs text-muted">
+        <div className="grid h-[4.75rem] place-items-center rounded-field border border-dashed border-ink/25 text-xs text-ink-2">
           Everything is cut. Undo or click a struck-through word to bring it back.
         </div>
       </div>
@@ -81,7 +81,7 @@ export function Timeline() {
 
   return (
     <div className="px-4 py-3">
-      <div className="relative mb-1 h-3 text-[10px] tabular-nums text-muted" aria-hidden>
+      <div className="relative mb-1 h-3 font-label text-[10px] text-ink-2" aria-hidden>
         {ticks.map((t) => {
           const at = (t / duration) * 100;
           // Keep the first and last labels inside the track instead of centring them on the edge.
@@ -102,9 +102,9 @@ export function Timeline() {
         onPointerMove={(e) => {
           if (e.buttons === 1) seekFromPointer(e.clientX);
         }}
-        className="relative h-14 cursor-pointer touch-none overflow-hidden rounded-lg border border-border bg-panel-2"
+        className="relative h-14 cursor-pointer touch-none overflow-hidden rounded-field border border-rule"
       >
-        <div className="absolute inset-y-0 left-0 bg-accent/20" style={{ width: `${pct}%` }} />
+        <div className="absolute inset-y-0 left-0 bg-ink/[0.07]" style={{ width: `${pct}%` }} />
         {marks.map((m, i) => (
           <div
             key={i}
@@ -112,8 +112,7 @@ export function Timeline() {
             className="absolute inset-y-0 w-2 -translate-x-1/2"
             style={{ left: `${(m.at / duration) * 100}%` }}
           >
-            <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-bg" />
-            <div className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-b-full bg-red-400/80" />
+            <div className="absolute inset-y-2 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-cut" />
           </div>
         ))}
         {review.map((m) => (
@@ -122,8 +121,8 @@ export function Timeline() {
             title={m.label}
             className={`pointer-events-none absolute min-w-[3px] ${
               m.kind === "silence"
-                ? `inset-y-0 border-x ${m.included ? "border-amber-400 bg-amber-400/35" : "border-amber-400/40 bg-amber-400/10"}`
-                : `bottom-0 h-1/3 ${m.included ? "bg-amber-300" : "bg-amber-300/30"}`
+                ? `inset-y-0 border-x ${m.included ? "border-mark bg-mark/35" : "border-mark/40 bg-mark/10"}`
+                : `bottom-0 h-1/3 ${m.included ? "bg-mark" : "bg-mark/30"}`
             }`}
             style={{ left: `${(m.from / duration) * 100}%`, width: `${((m.to - m.from) / duration) * 100}%` }}
           />
@@ -132,11 +131,11 @@ export function Timeline() {
           <div
             key={b.id}
             title={b.name}
-            className={`pointer-events-none absolute bottom-0 h-1 min-w-[3px] ${b.id === selectedClipId ? "bg-accent-2" : "bg-accent-2/40"}`}
+            className={`pointer-events-none absolute bottom-0 h-1 min-w-[3px] ${b.id === selectedClipId ? "bg-ink" : "bg-ink/35"}`}
             style={{ left: `${(b.from / duration) * 100}%`, width: `${((b.to - b.from) / duration) * 100}%` }}
           />
         ))}
-        <div className="absolute inset-y-0 w-0.5 bg-accent" style={{ left: `${pct}%` }} />
+        <div className="absolute inset-y-0 w-0.5 bg-ink" style={{ left: `${pct}%` }} />
       </div>
     </div>
   );

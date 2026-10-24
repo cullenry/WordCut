@@ -14,7 +14,7 @@ export function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={() => void navigator.clipboard?.writeText(text).then(() => setCopied(true), () => undefined)}
-      className="press rounded-full border border-paper/30 px-4 py-2 font-label text-xs uppercase tracking-[0.12em] transition-colors hover:border-paper"
+      className="press rounded-full bg-paper/10 px-4 py-2 font-label text-xs uppercase tracking-[0.12em] transition-colors hover:bg-paper/20"
     >
       <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
     </button>

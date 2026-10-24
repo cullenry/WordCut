@@ -9,7 +9,7 @@ export function SidePanel() {
   const panel = useEditorStore((s) => s.panel);
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between border-b border-border pr-4">
+      <div className="flex items-center justify-between border-b border-rule pr-4">
         <Tabs />
         {panel === "transcript" && <TranscriptMeta />}
       </div>
@@ -31,7 +31,7 @@ function Tabs() {
         Clips
         {count > 0 && (
           // Re-keyed on every change so a new clip gives the count a small pop, even from the other tab.
-          <span key={count} className="badge-pop rounded-full bg-accent/25 px-1.5 text-[11px] tabular-nums text-accent-2">
+          <span key={count} className="badge-pop rounded-full bg-ink/10 px-1.5 font-label text-[10px] leading-4 text-ink">
             {count}
           </span>
         )}
@@ -57,11 +57,11 @@ function Tab({
       aria-selected={active}
       onClick={() => onSelect(id)}
       className={`relative flex items-center gap-1.5 px-2.5 py-3 text-sm font-medium ${
-        active ? "text-fg" : "text-muted hover:text-fg"
+        active ? "text-ink" : "text-ink-2 hover:text-ink"
       }`}
     >
       {children}
-      {active && <span className="absolute inset-x-2.5 bottom-0 h-0.5 rounded-full bg-accent" />}
+      {active && <span className="absolute inset-x-2.5 bottom-0 h-0.5 rounded-full bg-ink" />}
     </button>
   );
 }

@@ -25,8 +25,8 @@ export function drawCaptionSample(
   fontFamily?: string,
 ): void {
   const bg = ctx.createLinearGradient(0, 0, width, height);
-  bg.addColorStop(0, "#1c1b27");
-  bg.addColorStop(1, "#2c2742");
+  bg.addColorStop(0, "#1e1b18");
+  bg.addColorStop(1, "#34302a");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
 
